@@ -112,6 +112,9 @@ const DashboardHome = ({ center, attendanceLink }) => {
     messageType: ''
   });
   
+  // State to track if the password reset section is expanded
+  const [passwordResetExpanded, setPasswordResetExpanded] = useState(false);
+  
   useEffect(() => {
     fetchPasswordSettings();
   }, []);
@@ -150,6 +153,11 @@ const DashboardHome = ({ center, attendanceLink }) => {
       ...loginPasswordData,
       [field]: !loginPasswordData[field]
     });
+  };
+  
+  // Toggle password reset section expansion
+  const togglePasswordResetSection = () => {
+    setPasswordResetExpanded(!passwordResetExpanded);
   };
   
   // Update login password
@@ -385,87 +393,6 @@ const DashboardHome = ({ center, attendanceLink }) => {
         
         <div className="col-md-6">
           <div className="card mb-4">
-            <div className="card-header bg-warning text-dark">
-              <h5>Reset Admin Password</h5>
-            </div>
-            <div className="card-body">
-              <p>Change your admin dashboard login password:</p>
-              
-              <div className="mb-3">
-                <label htmlFor="currentPassword" className="form-label">Current Password</label>
-                <div className="input-group">
-                  <input
-                    type={loginPasswordData.showCurrentPassword ? 'text' : 'password'}
-                    className="form-control"
-                    id="currentPassword"
-                    name="currentPassword"
-                    value={loginPasswordData.currentPassword}
-                    onChange={handleLoginPasswordChange}
-                    placeholder="Enter your current password"
-                  />
-                  <button 
-                    className="btn btn-outline-secondary" 
-                    type="button" 
-                    onClick={() => togglePasswordVisibility('showCurrentPassword')}
-                  >
-                    {loginPasswordData.showCurrentPassword ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-              </div>
-              
-              <div className="mb-3">
-                <label htmlFor="newPassword" className="form-label">New Password</label>
-                <div className="input-group">
-                  <input
-                    type={loginPasswordData.showNewPassword ? 'text' : 'password'}
-                    className="form-control"
-                    id="newPassword"
-                    name="newPassword"
-                    value={loginPasswordData.newPassword}
-                    onChange={handleLoginPasswordChange}
-                    placeholder="Enter new password (min 6 characters)"
-                  />
-                  <button 
-                    className="btn btn-outline-secondary" 
-                    type="button" 
-                    onClick={() => togglePasswordVisibility('showNewPassword')}
-                  >
-                    {loginPasswordData.showNewPassword ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-                <div className="form-text">Password must be at least 6 characters long</div>
-              </div>
-              
-              <div className="mb-3">
-                <label htmlFor="confirmPassword" className="form-label">Confirm New Password</label>
-                <input
-                  type="password"
-                  className="form-control"
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  value={loginPasswordData.confirmPassword}
-                  onChange={handleLoginPasswordChange}
-                  placeholder="Confirm your new password"
-                />
-              </div>
-              
-              <button
-                className="btn btn-warning"
-                onClick={updateLoginPassword}
-                disabled={loginPasswordData.loading}
-              >
-                {loginPasswordData.loading ? 'Updating...' : 'Update Password'}
-              </button>
-              
-              {loginPasswordData.message && (
-                <div className={`alert alert-${loginPasswordData.messageType === 'success' ? 'success' : 'danger'} mt-3`}>
-                  {loginPasswordData.message}
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div className="card mb-4">
             <div className="card-header">
               <h5>Quick Navigation</h5>
             </div>
@@ -479,6 +406,94 @@ const DashboardHome = ({ center, attendanceLink }) => {
                 </Link>
               </div>
             </div>
+          </div>
+          
+          <div className="card mb-4">
+            <div className="card-header bg-warning text-dark" 
+                 onClick={togglePasswordResetSection} 
+                 style={{ cursor: 'pointer' }}>
+              <div className="d-flex justify-content-between align-items-center">
+                <h5 className="mb-0">Reset Admin Password</h5>
+                <span>{passwordResetExpanded ? '▲' : '▼'}</span>
+              </div>
+            </div>
+            {passwordResetExpanded && (
+              <div className="card-body">
+                <p>Change your admin dashboard login password:</p>
+                
+                <div className="mb-3">
+                  <label htmlFor="currentPassword" className="form-label">Current Password</label>
+                  <div className="input-group">
+                    <input
+                      type={loginPasswordData.showCurrentPassword ? 'text' : 'password'}
+                      className="form-control"
+                      id="currentPassword"
+                      name="currentPassword"
+                      value={loginPasswordData.currentPassword}
+                      onChange={handleLoginPasswordChange}
+                      placeholder="Enter your current password"
+                    />
+                    <button 
+                      className="btn btn-outline-secondary" 
+                      type="button" 
+                      onClick={() => togglePasswordVisibility('showCurrentPassword')}
+                    >
+                      {loginPasswordData.showCurrentPassword ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="mb-3">
+                  <label htmlFor="newPassword" className="form-label">New Password</label>
+                  <div className="input-group">
+                    <input
+                      type={loginPasswordData.showNewPassword ? 'text' : 'password'}
+                      className="form-control"
+                      id="newPassword"
+                      name="newPassword"
+                      value={loginPasswordData.newPassword}
+                      onChange={handleLoginPasswordChange}
+                      placeholder="Enter new password (min 6 characters)"
+                    />
+                    <button 
+                      className="btn btn-outline-secondary" 
+                      type="button" 
+                      onClick={() => togglePasswordVisibility('showNewPassword')}
+                    >
+                      {loginPasswordData.showNewPassword ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                  <div className="form-text">Password must be at least 6 characters long</div>
+                </div>
+                
+                <div className="mb-3">
+                  <label htmlFor="confirmPassword" className="form-label">Confirm New Password</label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    value={loginPasswordData.confirmPassword}
+                    onChange={handleLoginPasswordChange}
+                    placeholder="Confirm your new password"
+                  />
+                </div>
+                
+                <button
+                  className="btn btn-warning"
+                  onClick={updateLoginPassword}
+                  disabled={loginPasswordData.loading}
+                >
+                  {loginPasswordData.loading ? 'Updating...' : 'Update Password'}
+                </button>
+                
+                {loginPasswordData.message && (
+                  <div className={`alert alert-${loginPasswordData.messageType === 'success' ? 'success' : 'danger'} mt-3`}>
+                    {loginPasswordData.message}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
