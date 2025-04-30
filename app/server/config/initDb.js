@@ -26,6 +26,33 @@ function initializeDatabase() {
     }
   });
 
+  // Create Super Admin table
+  db.run(`CREATE TABLE IF NOT EXISTS super_admins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    last_login TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`, (err) => {
+    if (err) {
+      console.error('Error creating super_admins table:', err.message);
+    } else {
+      console.log('Super Admins table created successfully.');
+      
+      // Create default super admin account
+      const SuperAdmin = require('../models/superAdminModel');
+      SuperAdmin.createDefault((err, result) => {
+        if (err) {
+          console.error('Error creating default super admin:', err.message);
+        } else if (result.exists) {
+          console.log('Default super admin already exists.');
+        } else {
+          console.log('Default super admin created successfully.');
+        }
+      });
+    }
+  });
+
   // Create Students table
   db.run(`CREATE TABLE IF NOT EXISTS students (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

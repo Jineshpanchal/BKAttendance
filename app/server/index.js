@@ -7,6 +7,7 @@ require('dotenv').config();
 const authRoutes = require('./routes/authRoutes');
 const studentRoutes = require('./routes/studentRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
+const superAdminRoutes = require('./routes/superAdminRoutes');
 
 // Initialize express app
 const app = express();
@@ -20,6 +21,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/attendance', attendanceRoutes);
+app.use('/api/superadmin', superAdminRoutes);
 
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, '../client/build')));
