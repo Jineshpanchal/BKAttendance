@@ -169,6 +169,39 @@ const ReportsPanel = () => {
     saveAs(blob, `${fileName}.xlsx`);
   };
 
+  const formatDateTime = (dateString, timestamp) => {
+    if (!dateString) return '';
+    
+    try {
+      // Format the date part
+      const [year, month, day] = dateString.split('-').map(Number);
+      const date = new Date(Date.UTC(year, month - 1, day));
+      const formattedDate = date.toLocaleDateString(undefined, { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+      
+      // Format the time part if timestamp exists
+      let formattedTime = '';
+      if (timestamp) {
+        const time = new Date(timestamp);
+        formattedTime = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+      
+      return { 
+        formattedDate,
+        formattedTime
+      };
+    } catch (e) {
+      console.error("Error formatting date or time:", e);
+      return { 
+        formattedDate: dateString,
+        formattedTime: ''
+      };
+    }
+  };
+
   const handleExportDaily = () => {
     if (!dailyData || !dailyData.attendance || dailyData.attendance.length === 0) { alert('No data to export.'); return; }
     const dataToExport = dailyData.attendance.map(item => ({
@@ -176,15 +209,25 @@ const ReportsPanel = () => {
       'Name': item.name,
       'Type': item.type,
       'Gender': item.gender,
-      'Age': item.age
+      'Age': item.age,
+      'Status': item.is_present ? 'Present' : 'Absent',
+      'Time': item.is_present && item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : '-'
     }));
     exportToExcel(dataToExport, `Daily_Report_${dailyData.date}`, 'Daily');
   };
   
   const handleExportStudent = () => {
-      if (!studentData || !studentData.attendance || studentData.attendance.length === 0) { alert('No data to export.'); return; }
-      const dataToExport = studentData.attendance.map(item => ({ 'Date': item.date }));
-      exportToExcel(dataToExport, `Student_Report_${studentData.student.roll_number}`, 'Attendance');
+    if (!studentData || !studentData.attendance || studentData.attendance.length === 0) { 
+      alert('No data to export.'); 
+      return; 
+    }
+    
+    const dataToExport = studentData.attendance.map(item => ({ 
+      'Date': item.date,
+      'Time': item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : ''
+    }));
+    
+    exportToExcel(dataToExport, `Student_Report_${studentData.student.roll_number}`, 'Attendance');
   };
 
   const handleExportWeekly = () => {
@@ -232,6 +275,18 @@ const ReportsPanel = () => {
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
     saveAs(blob, `Monthly_Grid_${monthlyGridData.year}-${monthlyGridData.month}.xlsx`);
+  };
+
+  // Helper function to format time from timestamp
+  const formatDailyTime = (timestamp) => {
+    if (!timestamp) return '-';
+    try {
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      console.error("Error formatting time:", timestamp, e);
+      return '-';
+    }
   };
 
   // --- Render Functions ---
@@ -368,6 +423,7 @@ const ReportsPanel = () => {
                   <th>Gender</th>
                   <th>Age</th>
                   <th>Status</th>
+                  <th>Time</th>
                 </tr>
               </thead>
               <tbody>
@@ -379,6 +435,7 @@ const ReportsPanel = () => {
                     <td>{item.gender || '-'}</td>
                     <td>{item.age || '-'}</td>
                     <td>{item.is_present ? '✅ Present' : '❌ Absent'}</td>
+                    <td>{item.is_present && item.timestamp ? formatDailyTime(item.timestamp) : '-'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -389,15 +446,37 @@ const ReportsPanel = () => {
     }
     
     if (reportType === 'student' && studentData) {
-        return (
-            <div className="mt-4">
-                <h4>Attendance Report for {studentData.student.name} ({studentData.student.roll_number})</h4>
-                <button onClick={handleExportStudent} className="btn btn-success btn-sm mb-2">Export Dates to Excel</button>
-                {studentData.attendance.length > 0 ? (
-                    <ul className="list-group">{studentData.attendance.map(item => (<li key={item.id} className="list-group-item">{item.date}</li>))}</ul>
-                ) : <p>No attendance records found for this student.</p>}
+      return (
+        <div className="mt-4">
+          <h4>Attendance Report for {studentData.student.name} ({studentData.student.roll_number})</h4>
+          <button onClick={handleExportStudent} className="btn btn-success btn-sm mb-2">Export to Excel</button>
+          {studentData.attendance.length > 0 ? (
+            <div className="table-responsive">
+              <table className="table table-striped table-bordered">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {studentData.attendance.map((item, index) => {
+                    const { formattedDate, formattedTime } = formatDateTime(item.date, item.timestamp);
+                    return (
+                      <tr key={item.id}>
+                        <td>{index + 1}</td>
+                        <td>{formattedDate}</td>
+                        <td>{formattedTime || '-'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-        );
+          ) : <p>No attendance records found for this student.</p>}
+        </div>
+      );
     }
 
     if (reportType === 'weekly' && weeklyData) {
@@ -473,6 +552,17 @@ const ReportsPanel = () => {
     if (reportType === 'monthlyGrid' && monthlyGridData) {
       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       const monthName = monthNames[monthlyGridData.month - 1];
+      
+      const formatGridTime = (timestamp) => {
+        if (!timestamp) return '';
+        try {
+          const time = new Date(timestamp);
+          return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch (e) {
+          return '';
+        }
+      };
+      
       return (
         <div className="mt-4">
           <h4>Monthly Grid ({monthName} {monthlyGridData.year})</h4>
@@ -495,7 +585,17 @@ const ReportsPanel = () => {
                       <td>{student.roll_number}</td>
                       <td>{student.name}</td>
                       <td>{student.type || '-'}</td>
-                      {student.attendance.map((dayStatus, index) => (<td key={index} style={{ textAlign: 'center', backgroundColor: dayStatus.present ? '#dff0d8' : '#f2dede' }}>{dayStatus.present ? '✔️' : '❌'}</td>))}
+                      {student.attendance.map((dayStatus, index) => (
+                        <td 
+                          key={index} 
+                          style={{ textAlign: 'center', backgroundColor: dayStatus.present ? '#dff0d8' : '#f2dede' }}
+                          title={dayStatus.present && dayStatus.timestamp ? 
+                            `Present at ${formatGridTime(dayStatus.timestamp)}` : 
+                            (dayStatus.present ? 'Present' : 'Absent')}
+                        >
+                          {dayStatus.present ? '✔️' : '❌'}
+                        </td>
+                      ))}
                       <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{student.total_present}</td>
                     </tr>
                   ))}

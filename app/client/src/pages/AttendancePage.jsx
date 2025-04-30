@@ -296,7 +296,9 @@ const AttendancePage = () => {
         setMessage(`Attendance already marked for ${response.data.student_name}`);
       } else {
         // First time marking today
-        setMessage(`Attendance marked for ${response.data.student_name}`);
+        const timestamp = new Date(response.data.timestamp);
+        const formattedTime = timestamp.toLocaleTimeString();
+        setMessage(`Attendance marked for ${response.data.student_name} at ${formattedTime}`);
       }
       
       setMessageType('success');

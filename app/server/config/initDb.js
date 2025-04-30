@@ -79,6 +79,7 @@ function initializeDatabase() {
     student_id INTEGER NOT NULL,
     center_id TEXT NOT NULL,
     date TEXT NOT NULL,
+    timestamp TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (student_id) REFERENCES students (id),
     FOREIGN KEY (center_id) REFERENCES centers (center_id),
@@ -134,6 +135,26 @@ function checkAndAddColumns() {
       db.run(`ALTER TABLE centers ADD COLUMN attendance_password_enabled INTEGER DEFAULT 0`, err => {
         if (err) console.error('Error adding attendance_password_enabled column:', err.message);
         else console.log('Added attendance_password_enabled column successfully');
+      });
+    }
+  });
+  
+  // Check if timestamp column exists in attendance table
+  db.all(`PRAGMA table_info(attendance)`, (err, columns) => {
+    if (err) {
+      console.error('Error checking attendance table columns:', err.message);
+      return;
+    }
+    
+    // Check if timestamp column exists
+    const hasTimestampColumn = columns.some(col => col.name === 'timestamp');
+    
+    // Add timestamp column if it doesn't exist
+    if (!hasTimestampColumn) {
+      console.log('Adding timestamp column to attendance table');
+      db.run(`ALTER TABLE attendance ADD COLUMN timestamp TIMESTAMP`, err => {
+        if (err) console.error('Error adding timestamp column:', err.message);
+        else console.log('Added timestamp column successfully');
       });
     }
   });

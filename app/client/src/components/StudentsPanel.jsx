@@ -675,6 +675,13 @@ const StudentAttendance = () => {
       
       const startDayOfWeek = firstDayOfMonth.getDay(); 
       const cellsArray = [];
+      
+      // Create a map with dates and timestamps
+      const attendanceMap = {};
+      attendance.forEach(a => {
+        attendanceMap[a.date] = a.timestamp;
+      });
+      
       const presentDates = new Set(attendance.map(a => a.date));
       
       for (let i = 0; i < startDayOfWeek; i++) {
@@ -689,6 +696,7 @@ const StudentAttendance = () => {
           date: dateString,
           dayOfMonth: i,
           isPresent: presentDates.has(dateString),
+          timestamp: attendanceMap[dateString] || null,
           isPadding: false,
           key: dateString 
         });
@@ -779,6 +787,19 @@ const StudentAttendance = () => {
     } catch (e) { 
       console.error("Error formatting date:", dateString, e);
       return dateString; 
+    }
+  };
+  
+  const formatTimeFromTimestamp = (timestamp) => {
+    if (!timestamp) return '';
+    try {
+      // Log the timestamp for debugging
+      console.log('Processing timestamp:', timestamp);
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      console.error("Error formatting time:", timestamp, e);
+      return '';
     }
   };
   
@@ -918,12 +939,16 @@ const StudentAttendance = () => {
                         key={cell.key} 
                         className={`calendar-day ${cell.isPresent ? 'present' : 'absent'}`}
                         onClick={() => handleToggleAttendance(cell.date)}
-                        // Use formatDateForDisplay for the tooltip to ensure correctness
                         title={`${formatDateForDisplay(cell.date)} - Click to ${cell.isPresent ? 'Mark Absent' : 'Mark Present'}`}
                       >
                         <div className="date-number">
                           {cell.dayOfMonth}
                         </div>
+                        {cell.isPresent && (
+                          <div className="timestamp">
+                            {cell.timestamp ? formatTimeFromTimestamp(cell.timestamp) : ''}
+                          </div>
+                        )}
                         <div className={`status-indicator ${cell.isPresent ? 'present' : 'absent'}`}></div>
                       </div>
                     )
@@ -940,6 +965,7 @@ const StudentAttendance = () => {
                     <th>#</th>
                     <th>Date</th>
                     <th>Status</th>
+                    <th>Time</th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -948,13 +974,13 @@ const StudentAttendance = () => {
                   {[...actualDaysInMonth].sort((a, b) => new Date(b.date) - new Date(a.date)).map((day, index) => (
                     <tr key={day.date} className={day.isPresent ? 'table-light' : ''}>
                       <td>{index + 1}</td>
-                      {/* Use formatDateForDisplay here as well */}
                       <td>{formatDateForDisplay(day.date)}</td>
                       <td>
                         <span className={`badge ${day.isPresent ? 'bg-success-subtle text-success-emphasis' : 'bg-danger-subtle text-danger-emphasis'}`}>
                           {day.isPresent ? 'Present' : 'Absent'}
                         </span>
                       </td>
+                      <td>{day.isPresent && day.timestamp ? formatTimeFromTimestamp(day.timestamp) : '-'}</td>
                       <td>
                         <button 
                           className={`btn btn-sm ${day.isPresent ? 'btn-outline-danger' : 'btn-outline-success'}`}
@@ -1056,6 +1082,12 @@ const StudentAttendance = () => {
         /* Hide date number in padding cells */
         .calendar-day.padding .date-number {
            visibility: hidden; 
+        }
+        .timestamp {
+          font-size: 0.65rem;
+          color: #444;
+          margin-top: 4px;
+          font-weight: 500;
         }
       `}</style>
     </div>

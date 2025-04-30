@@ -83,6 +83,7 @@ exports.markAttendanceByRoll = (req, res) => {
           message: `Attendance marked for ${student.name}`,
           student_name: student.name,
           date: result.date,
+          timestamp: result.timestamp,
           already_marked: false
         });
       });
@@ -162,7 +163,8 @@ exports.markAttendanceByAdmin = (req, res) => {
       
       res.status(201).json({ 
         message: 'Attendance marked successfully',
-        date: result.date
+        date: result.date,
+        timestamp: result.timestamp
       });
     });
   });

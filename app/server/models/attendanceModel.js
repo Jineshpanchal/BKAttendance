@@ -5,6 +5,8 @@ class Attendance {
   static markAttendance(student_id, center_id, date, callback) {
     // Format: YYYY-MM-DD
     const formattedDate = date || new Date().toISOString().split('T')[0];
+    // Add timestamp 
+    const timestamp = new Date().toISOString();
     
     // Check if attendance already exists for this student on this date
     const checkSql = `SELECT 1 FROM attendance 
@@ -19,12 +21,12 @@ class Attendance {
       }
       
       // Mark attendance
-      const sql = `INSERT INTO attendance (student_id, center_id, date) 
-                   VALUES (?, ?, ?)`;
+      const sql = `INSERT INTO attendance (student_id, center_id, date, timestamp) 
+                   VALUES (?, ?, ?, ?)`;
       
-      db.run(sql, [student_id, center_id, formattedDate], function(err) {
+      db.run(sql, [student_id, center_id, formattedDate, timestamp], function(err) {
         if (err) return callback(err);
-        callback(null, { id: this.lastID, date: formattedDate });
+        callback(null, { id: this.lastID, date: formattedDate, timestamp: timestamp });
       });
     });
   }
@@ -46,6 +48,7 @@ class Attendance {
         s.type,
         a.id,
         a.date,
+        a.timestamp,
         CASE WHEN a.id IS NOT NULL THEN 1 ELSE 0 END as is_present,
         (SELECT total_count FROM total_students) as total_students_count,
         (SELECT COUNT(*) FROM attendance WHERE center_id = ? AND date = ?) as present_students_count
@@ -64,7 +67,7 @@ class Attendance {
   // Get attendance for a specific student
   static getByStudent(student_id, start_date, end_date, callback) {
     let sql = `
-      SELECT a.id, a.date, a.student_id
+      SELECT a.id, a.date, a.timestamp, a.student_id
       FROM attendance a
       WHERE a.student_id = ?
     `;
@@ -161,7 +164,7 @@ class Attendance {
         s.roll_number, 
         s.name, 
         s.type,
-        GROUP_CONCAT(a.date) as present_dates
+        GROUP_CONCAT(a.date || ',' || COALESCE(a.timestamp, '')) as attendance_data
       FROM students s
       LEFT JOIN attendance a ON s.id = a.student_id AND a.date BETWEEN ? AND ?
       WHERE s.center_id = ?
@@ -174,13 +177,17 @@ class Attendance {
 
       // Process results into the desired grid format
       const studentsData = results.map(student => {
-        const attendedDates = student.present_dates ? student.present_dates.split(',') : [];
+        const attendanceData = student.attendance_data ? student.attendance_data.split(',') : [];
         const attendanceMap = {};
         
         // Create a map for quick lookup
-        attendedDates.forEach(date => {
-          attendanceMap[date] = true;
-        });
+        for (let i = 0; i < attendanceData.length; i += 2) {
+          const date = attendanceData[i];
+          const timestamp = attendanceData[i + 1] || null;
+          if (date) {
+            attendanceMap[date] = timestamp;
+          }
+        }
 
         // Generate daily status for the month
         const dailyStatus = [];
@@ -188,7 +195,8 @@ class Attendance {
           const dateStr = `${year}-${monthStr}-${String(day).padStart(2, '0')}`;
           dailyStatus.push({
             date: dateStr,
-            present: !!attendanceMap[dateStr]
+            present: !!attendanceMap[dateStr],
+            timestamp: attendanceMap[dateStr] || null
           });
         }
         
@@ -198,7 +206,7 @@ class Attendance {
           name: student.name,
           type: student.type,
           attendance: dailyStatus,
-          total_present: attendedDates.length
+          total_present: Object.keys(attendanceMap).length
         };
       });
 
