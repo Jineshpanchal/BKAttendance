@@ -194,7 +194,7 @@ const AttendancePage = () => {
         if (err.response?.status === 404) {
             setMessage('Invalid attendance link. Center not found.');
         } else {
-            setMessage('Error connecting to the attendance system. Please try again.');
+        setMessage('Error connecting to the attendance system. Please try again.');
         }
         setMessageType('error');
         // Consider navigating away or showing a persistent error if the center is invalid
@@ -266,7 +266,7 @@ const AttendancePage = () => {
       if (err.response?.status === 401) {
         setMessage('Invalid attendance password.');
       } else {
-        setMessage('Error verifying password. Please try again.');
+      setMessage('Error verifying password. Please try again.');
       }
       setMessageType('error');
       // Clear stored verification on failure

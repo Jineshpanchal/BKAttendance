@@ -124,6 +124,26 @@ class Student {
       callback(null, students);
     });
   }
+  
+  // Find students by name in a center
+  static findByName(name, center_id, callback) {
+    const sql = `SELECT * FROM students WHERE LOWER(name) = LOWER(?) AND center_id = ?`;
+    
+    db.all(sql, [name, center_id], (err, students) => {
+      if (err) return callback(err);
+      callback(null, students);
+    });
+  }
+  
+  // Find similar names in a center
+  static findSimilarNames(name, center_id, callback) {
+    const sql = `SELECT * FROM students WHERE LOWER(name) LIKE LOWER(?) AND center_id = ?`;
+    
+    db.all(sql, [`%${name}%`, center_id], (err, students) => {
+      if (err) return callback(err);
+      callback(null, students);
+    });
+  }
 }
 
 module.exports = Student; 

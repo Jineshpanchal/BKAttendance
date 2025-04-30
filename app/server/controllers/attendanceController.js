@@ -331,7 +331,7 @@ exports.deleteAttendance = (req, res) => {
       });
     }
   );
-};
+}; 
 
 // Delete attendance by student ID and date
 exports.deleteAttendanceByStudentAndDate = (req, res) => {

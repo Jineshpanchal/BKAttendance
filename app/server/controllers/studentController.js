@@ -16,21 +16,73 @@ exports.createStudent = (req, res) => {
   if (!type || !validTypes.includes(type)) {
     return res.status(400).json({ message: 'Valid student type is required' });
   }
-  
-  // Create student
-  Student.create({ name, gender, age, center_id, roll_number, type }, (err, result) => {
+
+  // Check for duplicate names
+  Student.findByName(name, center_id, (err, existingStudents) => {
     if (err) {
-      return res.status(500).json({ message: 'Error creating student', error: err.message });
+      return res.status(500).json({ message: 'Error checking student name', error: err.message });
     }
-    
-    res.status(201).json({
-      message: 'Student created successfully',
-      student: {
-        id: result.id,
-        roll_number: result.roll_number
-      }
-    });
+
+    if (existingStudents && existingStudents.length > 0) {
+      // Find similar names to suggest alternatives
+      Student.findSimilarNames(name, center_id, (err, similarStudents) => {
+        if (err) {
+          return res.status(500).json({ message: 'Error checking similar names', error: err.message });
+        }
+
+        // Generate name suggestions
+        const suggestions = generateNameSuggestions(name, existingStudents, similarStudents);
+        
+        return res.status(400).json({
+          message: 'A student with this name already exists.',
+          existingStudents: existingStudents.map(s => ({
+            name: s.name,
+            roll_number: s.roll_number,
+            type: s.type
+          })),
+          suggestions: suggestions
+        });
+      });
+      return;
+    }
+
+    // If roll number is provided, check if it already exists
+    if (roll_number) {
+      Student.findByRollNumber(roll_number, center_id, (err, existingStudent) => {
+        if (err) {
+          return res.status(500).json({ message: 'Error checking roll number', error: err.message });
+        }
+        
+        if (existingStudent) {
+          return res.status(400).json({ 
+            message: `Roll number ${roll_number} is already assigned to student: ${existingStudent.name}`
+          });
+        }
+        
+        // Roll number is unique, proceed with creation
+        createNewStudent();
+      });
+    } else {
+      // No roll number provided, proceed with creation
+      createNewStudent();
+    }
   });
+
+  function createNewStudent() {
+    Student.create({ name, gender, age, center_id, roll_number, type }, (err, result) => {
+      if (err) {
+        return res.status(500).json({ message: 'Error creating student', error: err.message });
+      }
+      
+      res.status(201).json({
+        message: 'Student created successfully',
+        student: {
+          id: result.id,
+          roll_number: result.roll_number
+        }
+      });
+    });
+  }
 };
 
 // Get all students for a center
@@ -89,11 +141,17 @@ exports.getStudentByRollNumber = (req, res) => {
 // Update student
 exports.updateStudent = (req, res) => {
   const { id } = req.params;
-  const { name, gender, age, roll_number } = req.body;
+  const { name, gender, age, roll_number, type } = req.body;
   
   // Validate required fields
   if (!name) {
     return res.status(400).json({ message: 'Student name is required' });
+  }
+
+  // Validate type field
+  const validTypes = ['Kumar', 'Kumari', 'Adhar Kumar', 'Adhar Kumari', 'Mata'];
+  if (!type || !validTypes.includes(type)) {
+    return res.status(400).json({ message: 'Valid student type is required' });
   }
   
   // First check if student exists and belongs to this center
@@ -110,18 +168,80 @@ exports.updateStudent = (req, res) => {
     if (student.center_id !== req.center.center_id) {
       return res.status(403).json({ message: 'Access denied' });
     }
-    
-    // Update student
-    Student.update(id, { name, gender, age, roll_number }, (err, result) => {
-      if (err) {
-        return res.status(500).json({ message: 'Error updating student', error: err.message });
-      }
-      
-      res.status(200).json({
-        message: 'Student updated successfully',
-        changes: result.changes
+
+    // If name is changed, check for duplicates
+    if (name !== student.name) {
+      Student.findByName(name, req.center.center_id, (err, existingStudents) => {
+        if (err) {
+          return res.status(500).json({ message: 'Error checking student name', error: err.message });
+        }
+
+        if (existingStudents && existingStudents.length > 0) {
+          // Find similar names to suggest alternatives
+          Student.findSimilarNames(name, req.center.center_id, (err, similarStudents) => {
+            if (err) {
+              return res.status(500).json({ message: 'Error checking similar names', error: err.message });
+            }
+
+            // Generate name suggestions
+            const suggestions = generateNameSuggestions(name, existingStudents, similarStudents);
+            
+            return res.status(400).json({
+              message: 'A student with this name already exists.',
+              existingStudents: existingStudents.map(s => ({
+                name: s.name,
+                roll_number: s.roll_number,
+                type: s.type
+              })),
+              suggestions: suggestions
+            });
+          });
+          return;
+        }
+
+        // Name is unique, proceed with roll number check
+        checkRollNumber();
       });
-    });
+    } else {
+      // Name not changed, proceed with roll number check
+      checkRollNumber();
+    }
+
+    function checkRollNumber() {
+      // If roll number is changed, check if the new roll number is unique
+      if (roll_number && roll_number !== student.roll_number) {
+        Student.findByRollNumber(roll_number, req.center.center_id, (err, existingStudent) => {
+          if (err) {
+            return res.status(500).json({ message: 'Error checking roll number', error: err.message });
+          }
+          
+          if (existingStudent) {
+            return res.status(400).json({ 
+              message: `Roll number ${roll_number} is already assigned to student: ${existingStudent.name}`
+            });
+          }
+          
+          // Roll number is unique, proceed with update
+          updateExistingStudent();
+        });
+      } else {
+        // Roll number not changed, proceed with update
+        updateExistingStudent();
+      }
+    }
+
+    function updateExistingStudent() {
+      Student.update(id, { name, gender, age, roll_number, type }, (err, result) => {
+        if (err) {
+          return res.status(500).json({ message: 'Error updating student', error: err.message });
+        }
+        
+        res.status(200).json({
+          message: 'Student updated successfully',
+          changes: result.changes
+        });
+      });
+    }
   });
 };
 
@@ -312,4 +432,31 @@ exports.searchStudents = (req, res) => {
     
     res.status(200).json({ students });
   });
-}; 
+};
+
+// Helper function to generate name suggestions
+function generateNameSuggestions(name, existingStudents, similarStudents) {
+  const suggestions = [];
+  
+  // Add type-based suggestions
+  suggestions.push(`${name} Kumar`);
+  suggestions.push(`${name} Kumari`);
+  
+  // Add number-based suggestions
+  let counter = 2;
+  while (suggestions.length < 5) {
+    const suggestion = `${name} ${counter}`;
+    if (!existingStudents.some(s => s.name.toLowerCase() === suggestion.toLowerCase())) {
+      suggestions.push(suggestion);
+    }
+    counter++;
+  }
+  
+  // Add parent-based suggestions
+  suggestions.push(`${name} (S/O)`);
+  suggestions.push(`${name} (D/O)`);
+  
+  return suggestions.filter(suggestion => 
+    !existingStudents.some(s => s.name.toLowerCase() === suggestion.toLowerCase())
+  );
+} 

@@ -33,6 +33,14 @@ const ReportsPanel = () => {
   const handleWeeklyChange = (e) => setWeeklyForm({ ...weeklyForm, [e.target.name]: e.target.value });
   const handleMonthlyChange = (e) => setMonthlyForm({ ...monthlyForm, [e.target.name]: e.target.value });
 
+  // Function to handle tab changes
+  const handleReportTypeChange = (type) => {
+    if (type !== reportType) {
+      setReportType(type);
+      clearReportData();
+    }
+  };
+
   // --- Clear Data Helper ---
   const clearReportData = () => {
     setDailyData(null);
@@ -335,7 +343,8 @@ const ReportsPanel = () => {
   const renderReportData = () => {
     if (loading) return <div className="text-center mt-4"><p>Loading report...</p></div>;
     
-    if (dailyData) {
+    // Only display data for the active tab
+    if (reportType === 'daily' && dailyData) {
       return (
         <div className="mt-4">
           <h4>Daily Report ({dailyData.date})</h4>
@@ -379,7 +388,7 @@ const ReportsPanel = () => {
       );
     }
     
-    if (studentData) {
+    if (reportType === 'student' && studentData) {
         return (
             <div className="mt-4">
                 <h4>Attendance Report for {studentData.student.name} ({studentData.student.roll_number})</h4>
@@ -391,7 +400,7 @@ const ReportsPanel = () => {
         );
     }
 
-    if (weeklyData) {
+    if (reportType === 'weekly' && weeklyData) {
       return (
         <div className="mt-4">
           <h4>Weekly Report ({weeklyData.start_date} to {weeklyData.end_date})</h4>
@@ -424,7 +433,7 @@ const ReportsPanel = () => {
       );
     }
     
-    if (monthlySummaryData) {
+    if (reportType === 'monthlySummary' && monthlySummaryData) {
       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       const monthName = monthNames[monthlySummaryData.month - 1];
       return (
@@ -461,7 +470,7 @@ const ReportsPanel = () => {
       );
     }
     
-    if (monthlyGridData) {
+    if (reportType === 'monthlyGrid' && monthlyGridData) {
       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       const monthName = monthNames[monthlyGridData.month - 1];
       return (
@@ -509,11 +518,11 @@ const ReportsPanel = () => {
       <div className="card mb-4">
         <div className="card-header">
           <ul className="nav nav-tabs card-header-tabs">
-            <li className="nav-item"><button className={`nav-link ${reportType === 'daily' ? 'active' : ''}`} onClick={() => setReportType('daily')}>Daily</button></li>
-            <li className="nav-item"><button className={`nav-link ${reportType === 'student' ? 'active' : ''}`} onClick={() => setReportType('student')}>By Student</button></li>
-            <li className="nav-item"><button className={`nav-link ${reportType === 'weekly' ? 'active' : ''}`} onClick={() => setReportType('weekly')}>Weekly</button></li>
-            <li className="nav-item"><button className={`nav-link ${reportType === 'monthlySummary' ? 'active' : ''}`} onClick={() => setReportType('monthlySummary')}>Monthly Summary</button></li>
-            <li className="nav-item"><button className={`nav-link ${reportType === 'monthlyGrid' ? 'active' : ''}`} onClick={() => setReportType('monthlyGrid')}>Monthly Grid</button></li>
+            <li className="nav-item"><button className={`nav-link ${reportType === 'daily' ? 'active' : ''}`} onClick={() => handleReportTypeChange('daily')}>Daily</button></li>
+            <li className="nav-item"><button className={`nav-link ${reportType === 'student' ? 'active' : ''}`} onClick={() => handleReportTypeChange('student')}>By Student</button></li>
+            <li className="nav-item"><button className={`nav-link ${reportType === 'weekly' ? 'active' : ''}`} onClick={() => handleReportTypeChange('weekly')}>Weekly</button></li>
+            <li className="nav-item"><button className={`nav-link ${reportType === 'monthlySummary' ? 'active' : ''}`} onClick={() => handleReportTypeChange('monthlySummary')}>Monthly Summary</button></li>
+            <li className="nav-item"><button className={`nav-link ${reportType === 'monthlyGrid' ? 'active' : ''}`} onClick={() => handleReportTypeChange('monthlyGrid')}>Monthly Grid</button></li>
           </ul>
         </div>
         <div className="card-body">

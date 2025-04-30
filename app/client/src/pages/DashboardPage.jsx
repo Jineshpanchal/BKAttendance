@@ -228,16 +228,16 @@ const DashboardHome = ({ center, attendanceLink }) => {
                   Attendance Password
                 </label>
                 <div className="input-group">
-                  <input
+                <input
                     type={showPassword ? 'text' : 'password'} // Toggle type
-                    className="form-control"
-                    id="attendance_password"
-                    name="attendance_password"
-                    value={passwordSettings.attendance_password || ''}
-                    onChange={handlePasswordChange}
-                    disabled={!passwordSettings.attendance_password_enabled}
-                    required={passwordSettings.attendance_password_enabled}
-                  />
+                  className="form-control"
+                  id="attendance_password"
+                  name="attendance_password"
+                  value={passwordSettings.attendance_password || ''}
+                  onChange={handlePasswordChange}
+                  disabled={!passwordSettings.attendance_password_enabled}
+                  required={passwordSettings.attendance_password_enabled}
+                />
                   <button 
                     className="btn btn-outline-secondary" 
                     type="button" 

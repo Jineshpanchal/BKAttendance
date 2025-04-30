@@ -644,133 +644,420 @@ const AddEditStudent = () => {
 const StudentAttendance = () => {
   const params = useParams();
   const [student, setStudent] = useState(null);
-  const [attendance, setAttendance] = useState([]);
+  const [attendance, setAttendance] = useState([]); // Store only attendance records
+  const [allCellsInMonth, setAllCellsInMonth] = useState([]); // Store all cells (padding + days) for the selected month
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [dateRange, setDateRange] = useState({
-    startDate: '',
-    endDate: ''
-  });
   
+  // State for selected year and month number
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+  const [selectedMonthNum, setSelectedMonthNum] = useState(() => new Date().getMonth() + 1); // 1-12
+  
+  const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'list'
+  
+  // Derived selectedMonth string (YYYY-MM) for consistency if needed elsewhere
+  const selectedMonthYYYYMM = `${selectedYear}-${String(selectedMonthNum).padStart(2, '0')}`;
+  
+  // Fetch attendance when component mounts or selected month/year changes
   useEffect(() => {
-    if (params.id) {
-      fetchStudentAttendance(params.id);
+    if (params.id && selectedYear && selectedMonthNum) {
+      fetchStudentAttendanceForMonth(params.id, selectedYear, selectedMonthNum);
     }
-  }, [params.id]);
+  }, [params.id, selectedYear, selectedMonthNum]);
   
-  const fetchStudentAttendance = async (studentId, startDate = '', endDate = '') => {
+  // Generate all cells (padding + dates) for the selected month and map attendance status
+  useEffect(() => {
+    if (selectedYear && selectedMonthNum) {
+      const year = selectedYear;
+      const month = selectedMonthNum; // Month is 1-based here
+      const firstDayOfMonth = new Date(year, month - 1, 1);
+      const daysInMonth = new Date(year, month, 0).getDate();
+      
+      const startDayOfWeek = firstDayOfMonth.getDay(); 
+      const cellsArray = [];
+      const presentDates = new Set(attendance.map(a => a.date));
+      
+      for (let i = 0; i < startDayOfWeek; i++) {
+        cellsArray.push({ isPadding: true, key: `pad-start-${i}` });
+      }
+      
+      for (let i = 1; i <= daysInMonth; i++) {
+        const currentDate = new Date(year, month - 1, i);
+        // Ensure dateString is always in YYYY-MM-DD format, regardless of timezone
+        const dateString = `${year}-${String(month).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+        cellsArray.push({
+          date: dateString,
+          dayOfMonth: i,
+          isPresent: presentDates.has(dateString),
+          isPadding: false,
+          key: dateString 
+        });
+      }
+      
+      setAllCellsInMonth(cellsArray);
+    }
+  }, [selectedYear, selectedMonthNum, attendance]);
+  
+  const fetchStudentAttendanceForMonth = async (studentId, year, month) => {
     setLoading(true);
+    setError('');
+    const monthStr = String(month).padStart(2, '0');
+    const startDate = `${year}-${monthStr}-01`;
+    // Calculate end date correctly using Date object
+    const endDate = new Date(year, month, 0).toISOString().split('T')[0]; 
+    
     try {
+      if (!student) {
+        const studentRes = await studentsAPI.getById(studentId);
+        setStudent(studentRes.data.student);
+      }
+      
       const response = await attendanceAPI.getByStudent(studentId, startDate, endDate);
-      setStudent(response.data.student);
       setAttendance(response.data.attendance);
     } catch (err) {
       setError('Failed to load attendance data. Please try again.');
+      console.error(err);
+      setAttendance([]); 
+      setAllCellsInMonth([]);
     } finally {
       setLoading(false);
     }
   };
   
-  const handleDateChange = (e) => {
-    const { name, value } = e.target;
-    setDateRange({
-      ...dateRange,
-      [name]: value
-    });
+  // Handlers for year and month dropdowns
+  const handleYearChange = (e) => {
+    setSelectedYear(parseInt(e.target.value, 10));
   };
   
-  const handleFilterAttendance = () => {
-    if (params.id) {
-      fetchStudentAttendance(params.id, dateRange.startDate, dateRange.endDate);
+  const handleMonthNumChange = (e) => {
+    setSelectedMonthNum(parseInt(e.target.value, 10));
+  };
+  
+  const handleToggleAttendance = async (date) => {
+    if (!date) return; // Prevent action on padding cells
+    try {
+      setError(''); // Clear previous errors
+      const isPresent = attendance.some(a => a.date === date);
+      
+      // Optimistic UI Update
+      setAttendance(prevAttendance => 
+        isPresent 
+          ? prevAttendance.filter(a => a.date !== date)
+          : [...prevAttendance, { date: date, id: `temp-${Date.now()}` }] // Add temporary record
+      );
+      
+      // API Call
+      if (isPresent) {
+        await attendanceAPI.deleteByStudentAndDate(params.id, date);
+      } else {
+        await attendanceAPI.markByAdmin(params.id, date);
+      }
+      
+    } catch (err) {
+      setError('Failed to update attendance. Please try again.');
+      console.error(err);
+      // Revert Optimistic UI on Error
+      setAttendance(prevAttendance => {
+        const isPresentAfterAttempt = prevAttendance.some(a => a.date === date);
+        if (isPresent === isPresentAfterAttempt) { // Error occurred, need to revert
+          return isPresent 
+            ? [...prevAttendance, { date: date, id: `revert-${Date.now()}` }] // Add back if delete failed
+            : prevAttendance.filter(a => a.date !== date); // Remove if add failed
+        }
+        return prevAttendance; // State was already correct
+      });
     }
   };
   
-  if (loading) {
-    return <div>Loading attendance data...</div>;
+  const formatDateForDisplay = (dateString, options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) => {
+    if (!dateString) return '';
+    try {
+      // Create date assuming UTC to avoid timezone shifts affecting the date part
+      const [year, month, day] = dateString.split('-').map(Number);
+      const date = new Date(Date.UTC(year, month - 1, day)); 
+      return date.toLocaleDateString(undefined, options);
+    } catch (e) { 
+      console.error("Error formatting date:", dateString, e);
+      return dateString; 
+    }
+  };
+  
+  // Prepare data for views
+  const monthName = selectedYear && selectedMonthNum ? formatDateForDisplay(`${selectedYear}-${String(selectedMonthNum).padStart(2, '0')}-01`, { month: 'long', year: 'numeric' }) : '';
+  const actualDaysInMonth = allCellsInMonth.filter(cell => !cell.isPadding);
+  const presentCount = actualDaysInMonth.filter(d => d.isPresent).length;
+  const totalDaysShown = actualDaysInMonth.length;
+  const attendancePercentage = totalDaysShown > 0 ? Math.round((presentCount / totalDaysShown) * 100) : 0;
+  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  
+  // Generate year options for dropdown
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 10 }, (_, i) => currentYear - i);
+  
+  // Month options for dropdown
+  const monthOptions = [
+    { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' },
+    { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' },
+    { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' },
+    { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' },
+  ];
+
+  if (loading && !student) {
+    return <div className="text-center p-5">Loading student data...</div>;
   }
   
   return (
     <div>
+      {/* Header & Error */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h3>
           {student ? `Attendance for ${student.name} (${student.roll_number})` : 'Student Attendance'}
         </h3>
-        <Link to="/dashboard/students" className="btn btn-secondary">
+        <Link to="/dashboard/students" className="btn btn-secondary btn-sm">
           Back to Students
         </Link>
       </div>
-      
       {error && (
-        <div className="alert alert-danger">{error}</div>
+        <div className="alert alert-danger alert-dismissible fade show" role="alert">
+          {error}
+          <button type="button" className="btn-close" onClick={() => setError('')} aria-label="Close"></button>
+        </div>
       )}
       
+      {/* Filter Card */}
       <div className="card mb-4">
-        <div className="card-header">
-          <h5>Filter Attendance</h5>
+        <div className="card-header d-flex justify-content-between align-items-center">
+          <h5 className="mb-0">Select Month & View</h5>
+          {/* View Toggle Buttons */}
+          <div className="btn-group">
+            <button 
+              className={`btn btn-sm ${viewMode === 'calendar' ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => setViewMode('calendar')}
+              title="Calendar View"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z"/></svg>
+            </button>
+            <button 
+              className={`btn btn-sm ${viewMode === 'list' ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => setViewMode('list')}
+              title="List View"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fillRule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m-2-4A.5.5 0 0 1 3.5 7h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m-2-4A.5.5 0 0 1 1.5 3h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5"/></svg>
+            </button>
+          </div>
         </div>
         <div className="card-body">
-          <div className="row g-3">
-            <div className="col-md-4">
-              <label htmlFor="startDate" className="form-label">Start Date</label>
-              <input
-                type="date"
-                className="form-control"
-                id="startDate"
-                name="startDate"
-                value={dateRange.startDate}
-                onChange={handleDateChange}
-              />
-            </div>
-            <div className="col-md-4">
-              <label htmlFor="endDate" className="form-label">End Date</label>
-              <input
-                type="date"
-                className="form-control"
-                id="endDate"
-                name="endDate"
-                value={dateRange.endDate}
-                onChange={handleDateChange}
-              />
-            </div>
-            <div className="col-md-4 d-flex align-items-end">
-              <button
-                className="btn btn-primary w-100"
-                onClick={handleFilterAttendance}
+          {/* Year and Month Select Dropdowns */}
+          <div className="row g-3 align-items-end">
+            <div className="col-md-3 col-6">
+              <label htmlFor="yearSelector" className="form-label">Year</label>
+              <select 
+                id="yearSelector" 
+                className="form-select" 
+                value={selectedYear} 
+                onChange={handleYearChange}
               >
-                Apply Filter
-              </button>
+                {yearOptions.map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+            <div className="col-md-4 col-6">
+              <label htmlFor="monthSelector" className="form-label">Month</label>
+              <select 
+                id="monthSelector" 
+                className="form-select" 
+                value={selectedMonthNum} 
+                onChange={handleMonthNumChange}
+              >
+                {monthOptions.map(month => (
+                  <option key={month.value} value={month.value}>{month.label}</option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
       </div>
       
-      {attendance.length === 0 ? (
-        <div className="alert alert-info">
-          No attendance records found for this student in the selected date range.
+      {/* Attendance Display Area */}
+      {loading ? (
+          <div className="text-center p-5">
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading attendance...</span>
+            </div>
+          </div>
+      ) : !student ? (
+         <div className="alert alert-warning">Could not load student details.</div>
+      ) : totalDaysShown === 0 && !loading ? (
+        <div className="alert alert-warning">
+          No attendance data available for {monthName}. Select a different month.
         </div>
       ) : (
-        <div className="table-responsive">
-          <table className="table table-striped">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {attendance.map((record, index) => (
-                <tr key={record.id}>
-                  <td>{index + 1}</td>
-                  <td>{record.date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="alert alert-info">
-            Total days present: {attendance.length}
+        <div>
+          <div className="alert alert-secondary mb-4">
+            <strong>Attendance for {monthName}:</strong> {presentCount} days present out of {totalDaysShown} days ({attendancePercentage}%)
           </div>
+          
+          {viewMode === 'calendar' ? (
+            // --- Calendar View --- 
+            <div className="mb-4">
+              <div className="calendar-container">
+                {/* Day Labels */}
+                <div className="calendar-grid day-labels">
+                  {dayLabels.map(label => (
+                    <div key={label} className="day-label">{label}</div>
+                  ))}
+                </div>
+                {/* Calendar Days */}
+                <div className="calendar-grid">
+                  {allCellsInMonth.map(cell => 
+                    cell.isPadding ? (
+                      <div key={cell.key} className="calendar-day padding"></div>
+                    ) : (
+                      <div 
+                        key={cell.key} 
+                        className={`calendar-day ${cell.isPresent ? 'present' : 'absent'}`}
+                        onClick={() => handleToggleAttendance(cell.date)}
+                        // Use formatDateForDisplay for the tooltip to ensure correctness
+                        title={`${formatDateForDisplay(cell.date)} - Click to ${cell.isPresent ? 'Mark Absent' : 'Mark Present'}`}
+                      >
+                        <div className="date-number">
+                          {cell.dayOfMonth}
+                        </div>
+                        <div className={`status-indicator ${cell.isPresent ? 'present' : 'absent'}`}></div>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            // --- List View --- 
+            <div className="table-responsive">
+              <table className="table table-striped table-hover table-sm">
+                <thead className="table-light">
+                  <tr>
+                    <th>#</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Ensure list view uses and sorts actualDaysInMonth */} 
+                  {[...actualDaysInMonth].sort((a, b) => new Date(b.date) - new Date(a.date)).map((day, index) => (
+                    <tr key={day.date} className={day.isPresent ? 'table-light' : ''}>
+                      <td>{index + 1}</td>
+                      {/* Use formatDateForDisplay here as well */}
+                      <td>{formatDateForDisplay(day.date)}</td>
+                      <td>
+                        <span className={`badge ${day.isPresent ? 'bg-success-subtle text-success-emphasis' : 'bg-danger-subtle text-danger-emphasis'}`}>
+                          {day.isPresent ? 'Present' : 'Absent'}
+                        </span>
+                      </td>
+                      <td>
+                        <button 
+                          className={`btn btn-sm ${day.isPresent ? 'btn-outline-danger' : 'btn-outline-success'}`}
+                          onClick={() => handleToggleAttendance(day.date)}
+                          title={day.isPresent ? 'Mark Absent' : 'Mark Present'}
+                        >
+                          {day.isPresent ? 'Set Absent' : 'Set Present'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
+      
+      {/* Embedded Styles */}
+      <style jsx>{`
+        .calendar-container {
+          margin-top: 0.5rem; /* Reduced margin */
+        }
+        .calendar-grid {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr); /* Always 7 columns */
+          gap: 6px; /* Slightly reduced gap */
+        }
+        .calendar-grid.day-labels {
+          margin-bottom: 8px; /* Space between labels and days */
+          gap: 6px; 
+        }
+        .day-label {
+          text-align: center;
+          font-weight: bold;
+          color: #6c757d; /* Bootstrap secondary color */
+          font-size: 0.85rem;
+          padding-bottom: 4px;
+        }
+        .calendar-day {
+          border: 1px solid #e0e0e0;
+          border-radius: 4px; /* Slightly less rounded */
+          padding: 6px;
+          text-align: center;
+          cursor: pointer;
+          transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, background-color 0.15s ease-out;
+          position: relative; 
+          height: 60px; /* Slightly smaller height */
+          display: flex;
+          flex-direction: column;
+          justify-content: center; /* Center content vertically */
+          align-items: center; /* Center content horizontally */
+          background-color: #f8f9fa; 
+        }
+        .calendar-day:not(.padding):hover {
+          transform: translateY(-2px);
+          box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+        }
+        .calendar-day.present {
+          background-color: #e9f5e9; 
+          border-color: #c8e6c9;
+        }
+        .calendar-day.absent {
+          background-color: #ffebee; 
+          border-color: #ffcdd2;
+        }
+        .calendar-day.padding {
+          background-color: #f8f9fa; /* Same as default day */
+          border-color: transparent; /* Make border invisible */
+          cursor: default;
+          opacity: 0.5; /* Make padding visually less prominent */
+        }
+        .date-number {
+          font-size: 0.95rem; 
+          font-weight: 500;
+          color: #333;
+          line-height: 1; /* Ensure number doesn't take too much space */
+          /* Removed margin-top and align-self */
+        }
+        .status-indicator {
+          width: 8px; /* Smaller indicator */
+          height: 8px;
+          border-radius: 50%;
+          position: absolute;
+          bottom: 5px; /* Adjust position */
+          right: 5px;
+          border: 1px solid rgba(0,0,0,0.1);
+        }
+        .status-indicator.present {
+          background-color: #4CAF50; 
+        }
+        .status-indicator.absent {
+          background-color: #F44336; 
+        }
+        /* Hide indicator in padding cells */
+        .calendar-day.padding .status-indicator {
+          display: none;
+        }
+        /* Hide date number in padding cells */
+        .calendar-day.padding .date-number {
+           visibility: hidden; 
+        }
+      `}</style>
     </div>
   );
 };

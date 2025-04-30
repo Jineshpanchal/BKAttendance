@@ -120,7 +120,7 @@ class Attendance {
       SELECT 
         s.id as student_id, 
         s.roll_number, 
-        s.name,
+        s.name, 
         s.type,
         COUNT(a.id) as days_present
       FROM students s
@@ -159,7 +159,7 @@ class Attendance {
       SELECT 
         s.id as student_id, 
         s.roll_number, 
-        s.name,
+        s.name, 
         s.type,
         GROUP_CONCAT(a.date) as present_dates
       FROM students s
