@@ -16,5 +16,6 @@ router.post('/login', superAdminController.login);
 router.post('/change-password', verifySuperAdmin, superAdminController.changePassword);
 router.get('/centers', verifySuperAdmin, superAdminController.getAllCenters);
 router.get('/centers/:centerId', verifySuperAdmin, superAdminController.getCenterStats);
+router.post('/centers/:centerId/reset-password', verifySuperAdmin, superAdminController.resetCenterPassword);
 
 module.exports = router; 

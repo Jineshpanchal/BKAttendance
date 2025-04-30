@@ -128,4 +128,31 @@ exports.getCenterStats = (req, res) => {
       stats
     });
   });
+};
+
+// Reset center password
+exports.resetCenterPassword = (req, res) => {
+  const { centerId } = req.params;
+  const { newPassword } = req.body;
+  
+  // Validate new password
+  if (!newPassword || newPassword.trim().length < 6) {
+    return res.status(400).json({ 
+      message: 'New password is required and must be at least 6 characters long' 
+    });
+  }
+  
+  SuperAdmin.resetCenterPassword(centerId, newPassword, (err, result) => {
+    if (err) {
+      return res.status(500).json({ message: 'Error resetting center password', error: err.message });
+    }
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ message: 'Center not found' });
+    }
+    
+    res.status(200).json({
+      message: 'Center password has been reset successfully'
+    });
+  });
 }; 

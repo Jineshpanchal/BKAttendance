@@ -97,6 +97,44 @@ exports.getProfile = (req, res) => {
   });
 };
 
+// Update admin's login password
+exports.updateLoginPassword = (req, res) => {
+  const { center_id } = req.center;
+  const { currentPassword, newPassword } = req.body;
+  
+  // Validate input
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ message: 'Current password and new password are required' });
+  }
+  
+  if (newPassword.length < 6) {
+    return res.status(400).json({ message: 'New password must be at least 6 characters long' });
+  }
+  
+  Center.updateLoginPassword(center_id, { currentPassword, newPassword }, (err, result) => {
+    if (err) {
+      // Check for specific error message
+      if (err.message === 'Current password is incorrect') {
+        return res.status(401).json({ message: err.message });
+      }
+      
+      console.error('Error updating login password:', err);
+      return res.status(500).json({ 
+        message: 'Error updating login password', 
+        error: err.message 
+      });
+    }
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ message: 'Center not found' });
+    }
+    
+    res.status(200).json({
+      message: 'Login password updated successfully'
+    });
+  });
+};
+
 // Get attendance password settings
 exports.getAttendancePasswordSettings = (req, res) => {
   const { center_id } = req.center;

@@ -88,6 +88,22 @@ class SuperAdmin {
     });
   }
   
+  // Reset a center's password
+  static resetCenterPassword(centerId, newPassword, callback) {
+    bcrypt.hash(newPassword, 10, (err, hash) => {
+      if (err) return callback(err);
+      
+      const sql = `UPDATE centers SET password = ? WHERE center_id = ?`;
+      
+      db.run(sql, [hash, centerId], function(err) {
+        if (err) return callback(err);
+        
+        console.log(`Password reset for center: ${centerId}, changes: ${this.changes}`);
+        callback(null, { changes: this.changes });
+      });
+    });
+  }
+  
   // Get all registered centers
   static getAllCenters(callback) {
     const sql = `

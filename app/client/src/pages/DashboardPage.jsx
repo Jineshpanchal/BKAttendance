@@ -100,6 +100,18 @@ const DashboardHome = ({ center, attendanceLink }) => {
   const [messageType, setMessageType] = useState(''); // 'success' or 'error'
   const [showPassword, setShowPassword] = useState(false); // State for password visibility
   
+  // State for login password reset
+  const [loginPasswordData, setLoginPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+    showCurrentPassword: false,
+    showNewPassword: false,
+    loading: false,
+    message: '',
+    messageType: ''
+  });
+  
   useEffect(() => {
     fetchPasswordSettings();
   }, []);
@@ -119,6 +131,106 @@ const DashboardHome = ({ center, attendanceLink }) => {
       ...passwordSettings,
       [name]: type === 'checkbox' ? checked : value
     });
+  };
+  
+  // Handle login password change
+  const handleLoginPasswordChange = (e) => {
+    const { name, value } = e.target;
+    setLoginPasswordData({
+      ...loginPasswordData,
+      [name]: value,
+      message: '', // Clear messages on input change
+      messageType: ''
+    });
+  };
+  
+  // Toggle password visibility
+  const togglePasswordVisibility = (field) => {
+    setLoginPasswordData({
+      ...loginPasswordData,
+      [field]: !loginPasswordData[field]
+    });
+  };
+  
+  // Update login password
+  const updateLoginPassword = async () => {
+    // Reset message
+    setLoginPasswordData({
+      ...loginPasswordData,
+      message: '',
+      messageType: '',
+      loading: true
+    });
+    
+    // Validate input
+    if (!loginPasswordData.currentPassword) {
+      setLoginPasswordData({
+        ...loginPasswordData,
+        message: 'Current password is required',
+        messageType: 'error',
+        loading: false
+      });
+      return;
+    }
+    
+    if (!loginPasswordData.newPassword) {
+      setLoginPasswordData({
+        ...loginPasswordData,
+        message: 'New password is required',
+        messageType: 'error',
+        loading: false
+      });
+      return;
+    }
+    
+    if (loginPasswordData.newPassword.length < 6) {
+      setLoginPasswordData({
+        ...loginPasswordData,
+        message: 'New password must be at least 6 characters long',
+        messageType: 'error',
+        loading: false
+      });
+      return;
+    }
+    
+    if (loginPasswordData.newPassword !== loginPasswordData.confirmPassword) {
+      setLoginPasswordData({
+        ...loginPasswordData,
+        message: 'New password and confirmation do not match',
+        messageType: 'error',
+        loading: false
+      });
+      return;
+    }
+    
+    try {
+      // Make API call
+      await authAPI.updateLoginPassword({
+        currentPassword: loginPasswordData.currentPassword,
+        newPassword: loginPasswordData.newPassword
+      });
+      
+      // Update state on success
+      setLoginPasswordData({
+        ...loginPasswordData,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+        message: 'Password updated successfully',
+        messageType: 'success',
+        loading: false
+      });
+    } catch (err) {
+      // Handle error
+      console.error('Error updating login password:', err);
+      
+      setLoginPasswordData({
+        ...loginPasswordData,
+        message: err.response?.data?.message || 'Error updating password. Please try again.',
+        messageType: 'error',
+        loading: false
+      });
+    }
   };
   
   const savePasswordSettings = async () => {
@@ -272,6 +384,87 @@ const DashboardHome = ({ center, attendanceLink }) => {
         </div>
         
         <div className="col-md-6">
+          <div className="card mb-4">
+            <div className="card-header bg-warning text-dark">
+              <h5>Reset Admin Password</h5>
+            </div>
+            <div className="card-body">
+              <p>Change your admin dashboard login password:</p>
+              
+              <div className="mb-3">
+                <label htmlFor="currentPassword" className="form-label">Current Password</label>
+                <div className="input-group">
+                  <input
+                    type={loginPasswordData.showCurrentPassword ? 'text' : 'password'}
+                    className="form-control"
+                    id="currentPassword"
+                    name="currentPassword"
+                    value={loginPasswordData.currentPassword}
+                    onChange={handleLoginPasswordChange}
+                    placeholder="Enter your current password"
+                  />
+                  <button 
+                    className="btn btn-outline-secondary" 
+                    type="button" 
+                    onClick={() => togglePasswordVisibility('showCurrentPassword')}
+                  >
+                    {loginPasswordData.showCurrentPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </div>
+              
+              <div className="mb-3">
+                <label htmlFor="newPassword" className="form-label">New Password</label>
+                <div className="input-group">
+                  <input
+                    type={loginPasswordData.showNewPassword ? 'text' : 'password'}
+                    className="form-control"
+                    id="newPassword"
+                    name="newPassword"
+                    value={loginPasswordData.newPassword}
+                    onChange={handleLoginPasswordChange}
+                    placeholder="Enter new password (min 6 characters)"
+                  />
+                  <button 
+                    className="btn btn-outline-secondary" 
+                    type="button" 
+                    onClick={() => togglePasswordVisibility('showNewPassword')}
+                  >
+                    {loginPasswordData.showNewPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                <div className="form-text">Password must be at least 6 characters long</div>
+              </div>
+              
+              <div className="mb-3">
+                <label htmlFor="confirmPassword" className="form-label">Confirm New Password</label>
+                <input
+                  type="password"
+                  className="form-control"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={loginPasswordData.confirmPassword}
+                  onChange={handleLoginPasswordChange}
+                  placeholder="Confirm your new password"
+                />
+              </div>
+              
+              <button
+                className="btn btn-warning"
+                onClick={updateLoginPassword}
+                disabled={loginPasswordData.loading}
+              >
+                {loginPasswordData.loading ? 'Updating...' : 'Update Password'}
+              </button>
+              
+              {loginPasswordData.message && (
+                <div className={`alert alert-${loginPasswordData.messageType === 'success' ? 'success' : 'danger'} mt-3`}>
+                  {loginPasswordData.message}
+                </div>
+              )}
+            </div>
+          </div>
+          
           <div className="card mb-4">
             <div className="card-header">
               <h5>Quick Navigation</h5>

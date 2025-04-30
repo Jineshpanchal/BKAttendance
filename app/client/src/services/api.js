@@ -27,6 +27,7 @@ export const authAPI = {
   register: (centerData) => api.post('/auth/register', centerData),
   login: (credentials) => api.post('/auth/login', credentials),
   getProfile: () => api.get('/auth/profile'),
+  updateLoginPassword: (passwordData) => api.post('/auth/update-password', passwordData),
   getAttendancePasswordSettings: () => api.get('/auth/attendance-password'),
   updateAttendancePasswordSettings: (settings) => {
     // Ensure attendance_password_enabled is sent as a boolean

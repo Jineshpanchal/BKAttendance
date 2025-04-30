@@ -11,6 +11,7 @@ const SuperAdminDashboard = () => {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredCenters, setFilteredCenters] = useState([]);
+  const [resetPasswordData, setResetPasswordData] = useState({ showModal: false, password: '', loading: false, error: '', success: '' });
   const navigate = useNavigate();
 
   // Format date function
@@ -112,6 +113,153 @@ const SuperAdminDashboard = () => {
     setSearchQuery(e.target.value);
   };
 
+  const showResetPasswordModal = () => {
+    setResetPasswordData({
+      showModal: true,
+      password: '',
+      loading: false,
+      error: '',
+      success: ''
+    });
+  };
+
+  const hideResetPasswordModal = () => {
+    setResetPasswordData({
+      ...resetPasswordData,
+      showModal: false,
+      password: '',
+      error: '',
+      success: ''
+    });
+  };
+
+  const handlePasswordChange = (e) => {
+    setResetPasswordData({
+      ...resetPasswordData,
+      password: e.target.value,
+      error: '',
+      success: ''
+    });
+  };
+
+  const resetCenterPassword = async () => {
+    if (!resetPasswordData.password || resetPasswordData.password.length < 6) {
+      setResetPasswordData({
+        ...resetPasswordData,
+        error: 'Password must be at least 6 characters long'
+      });
+      return;
+    }
+
+    setResetPasswordData({
+      ...resetPasswordData,
+      loading: true,
+      error: '',
+      success: ''
+    });
+
+    try {
+      const token = localStorage.getItem('superadminToken');
+      await axios.post(
+        `/api/superadmin/centers/${selectedCenter.center_id}/reset-password`,
+        { newPassword: resetPasswordData.password },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      setResetPasswordData({
+        ...resetPasswordData,
+        loading: false,
+        success: 'Password has been reset successfully',
+        password: ''
+      });
+      
+      // Automatically close the modal after 2 seconds
+      setTimeout(() => {
+        hideResetPasswordModal();
+      }, 2000);
+    } catch (err) {
+      setResetPasswordData({
+        ...resetPasswordData,
+        loading: false,
+        error: err.response?.data?.message || 'Failed to reset password'
+      });
+    }
+  };
+
+  // Render the reset password modal
+  const renderResetPasswordModal = () => {
+    if (!resetPasswordData.showModal) return null;
+
+    return (
+      <div className="modal fade show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div className="modal-dialog">
+          <div className="modal-content">
+            <div className="modal-header bg-warning">
+              <h5 className="modal-title">Reset Password for {selectedCenter.name}</h5>
+              <button type="button" className="btn-close" onClick={hideResetPasswordModal}></button>
+            </div>
+            <div className="modal-body">
+              <p className="mb-3">Enter a new password for this meditation center:</p>
+              
+              {resetPasswordData.error && (
+                <div className="alert alert-danger">{resetPasswordData.error}</div>
+              )}
+              
+              {resetPasswordData.success && (
+                <div className="alert alert-success">{resetPasswordData.success}</div>
+              )}
+              
+              {!resetPasswordData.success && (
+                <div className="form-group mb-3">
+                  <label htmlFor="newPassword" className="form-label">New Password</label>
+                  <input
+                    type="password"
+                    id="newPassword"
+                    className="form-control"
+                    value={resetPasswordData.password}
+                    onChange={handlePasswordChange}
+                    placeholder="Enter new password (minimum 6 characters)"
+                    disabled={resetPasswordData.loading}
+                  />
+                  <div className="form-text text-muted">
+                    Password must be at least 6 characters long.
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button 
+                type="button" 
+                className="btn btn-secondary" 
+                onClick={hideResetPasswordModal}
+                disabled={resetPasswordData.loading}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-warning" 
+                onClick={resetCenterPassword}
+                disabled={resetPasswordData.loading || resetPasswordData.success}
+              >
+                {resetPasswordData.loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Resetting...
+                  </>
+                ) : 'Reset Password'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Render the center details modal
   const renderCenterDetails = () => {
     if (!selectedCenter) return null;
@@ -154,6 +302,12 @@ const SuperAdminDashboard = () => {
                               <p><strong>First Attendance:</strong> {formatDate(centerDetails.first_attendance_date)}</p>
                               <p><strong>Last Activity:</strong> {formatDate(centerDetails.last_activity_date)}</p>
                               <p><strong>URL:</strong> <code>/attendance/{centerDetails.center_id}</code></p>
+                              <button
+                                className="btn btn-warning mt-2"
+                                onClick={showResetPasswordModal}
+                              >
+                                <i className="bi bi-key-fill me-1"></i> Reset Password
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -291,6 +445,9 @@ const SuperAdminDashboard = () => {
       
       {/* Center details modal */}
       {renderCenterDetails()}
+      
+      {/* Reset password modal */}
+      {renderResetPasswordModal()}
     </div>
   );
 };

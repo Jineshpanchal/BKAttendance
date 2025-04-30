@@ -70,6 +70,34 @@ class Center {
     });
   }
   
+  // Update admin login password
+  static updateLoginPassword(center_id, passwordData, callback) {
+    const { currentPassword, newPassword } = passwordData;
+    
+    // First verify current password
+    this.findByCenterId(center_id, (err, center) => {
+      if (err) return callback(err);
+      if (!center) return callback(new Error('Center not found'));
+      
+      bcrypt.compare(currentPassword, center.password, (err, match) => {
+        if (err) return callback(err);
+        if (!match) return callback(new Error('Current password is incorrect'));
+        
+        // Hash and save the new password
+        bcrypt.hash(newPassword, 10, (err, hash) => {
+          if (err) return callback(err);
+          
+          const sql = `UPDATE centers SET password = ? WHERE center_id = ?`;
+          
+          db.run(sql, [hash, center_id], function(err) {
+            if (err) return callback(err);
+            callback(null, { changes: this.changes });
+          });
+        });
+      });
+    });
+  }
+  
   // Update attendance password settings
   static updateAttendancePassword(center_id, settings, callback) {
     const { attendance_password, attendance_password_enabled } = settings;
