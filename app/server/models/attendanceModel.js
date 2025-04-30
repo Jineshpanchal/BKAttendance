@@ -220,6 +220,16 @@ class Attendance {
       callback(null, { changes: this.changes });
     });
   }
+
+  // Delete attendance by student ID and date
+  static deleteByStudentAndDate(student_id, date, callback) {
+    const sql = `DELETE FROM attendance WHERE student_id = ? AND date = ?`;
+    
+    db.run(sql, [student_id, date], function(err) {
+      if (err) return callback(err);
+      callback(null, { changes: this.changes });
+    });
+  }
 }
 
 module.exports = Attendance; 

@@ -331,4 +331,49 @@ exports.deleteAttendance = (req, res) => {
       });
     }
   );
+};
+
+// Delete attendance by student ID and date
+exports.deleteAttendanceByStudentAndDate = (req, res) => {
+  const { student_id } = req.params;
+  const { date } = req.body;
+  const { center_id } = req.center;
+  
+  // Validate date format (YYYY-MM-DD)
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({ message: 'Invalid or missing date format. Use YYYY-MM-DD' });
+  }
+  
+  // Find student to verify ownership
+  Student.findById(student_id, (err, student) => {
+    if (err) {
+      return res.status(500).json({ message: 'Error finding student', error: err.message });
+    }
+    
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+    
+    // Verify student belongs to this center
+    if (student.center_id !== center_id) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    
+    // Delete attendance
+    Attendance.deleteByStudentAndDate(student_id, date, (err, result) => {
+      if (err) {
+        return res.status(500).json({ message: 'Error removing attendance', error: err.message });
+      }
+      
+      if (result.changes === 0) {
+        return res.status(404).json({ message: 'No attendance record found for this date' });
+      }
+      
+      res.status(200).json({
+        message: 'Attendance removed successfully',
+        date: date,
+        changes: result.changes
+      });
+    });
+  });
 }; 

@@ -129,6 +129,8 @@ export const attendanceAPI = {
   getMonthlySummaryReport: (year, month) => 
     api.get(`/attendance/report/monthly-summary/${year}/${month}`),
   delete: (id) => api.delete(`/attendance/${id}`),
+  deleteByStudentAndDate: (studentId, date) => 
+    api.delete(`/attendance/student/${studentId}`, { data: { date } }),
 };
 
 export default api; 

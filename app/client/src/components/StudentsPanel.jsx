@@ -130,13 +130,40 @@ const StudentImport = ({ onImportComplete }) => {
 const StudentsList = () => {
   const navigate = useNavigate();
   const [students, setStudents] = useState([]);
+  const [filteredStudents, setFilteredStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+  const [sortField, setSortField] = useState('roll_number'); // Default sort by roll number
+  const [sortDirection, setSortDirection] = useState('asc'); // Default ascending
   
   useEffect(() => {
     fetchStudents();
   }, []);
+  
+  // Filter students whenever search query or students list changes
+  useEffect(() => {
+    filterStudents();
+  }, [searchQuery, students]);
+  
+  const filterStudents = () => {
+    if (!searchQuery.trim()) {
+      setFilteredStudents(students);
+      return;
+    }
+    
+    const query = searchQuery.toLowerCase().trim();
+    const filtered = students.filter(student => 
+      student.name.toLowerCase().includes(query) || 
+      student.roll_number.toLowerCase().includes(query)
+    );
+    setFilteredStudents(filtered);
+  };
+  
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
   
   const fetchStudents = async () => {
     setLoading(true);
@@ -162,13 +189,71 @@ const StudentsList = () => {
           }
         })
       );
-      setStudents(studentsWithAttendance);
+      const sortedStudents = sortStudents(studentsWithAttendance, sortField, sortDirection);
+      setStudents(sortedStudents);
+      setFilteredStudents(sortedStudents);
     } catch (err) {
       setError('Failed to load students. Please try again.');
       console.error(err);
     } finally {
       setLoading(false);
     }
+  };
+  
+  // Function to sort students
+  const sortStudents = (studentsArray, field, direction) => {
+    return [...studentsArray].sort((a, b) => {
+      // Handle numeric fields
+      if (field === 'roll_number' || field === 'age') {
+        const aValue = field === 'roll_number' ? parseInt(a[field], 10) : (a[field] || 0);
+        const bValue = field === 'roll_number' ? parseInt(b[field], 10) : (b[field] || 0);
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      // Handle boolean field (isPresentToday)
+      else if (field === 'isPresentToday') {
+        return direction === 'asc' 
+          ? (a.isPresentToday === b.isPresentToday ? 0 : a.isPresentToday ? -1 : 1)
+          : (a.isPresentToday === b.isPresentToday ? 0 : a.isPresentToday ? 1 : -1);
+      }
+      // Handle string fields (name, gender, type)
+      else {
+        const aValue = (a[field] || '').toLowerCase();
+        const bValue = (b[field] || '').toLowerCase();
+        return direction === 'asc'
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+    });
+  };
+  
+  // Handle table header click for sorting
+  const handleSort = (field) => {
+    const newDirection = field === sortField && sortDirection === 'asc' ? 'desc' : 'asc';
+    setSortField(field);
+    setSortDirection(newDirection);
+    const sorted = sortStudents(students, field, newDirection);
+    setStudents(sorted);
+    
+    // Apply filtering again to maintain search results
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase().trim();
+      setFilteredStudents(sorted.filter(student => 
+        student.name.toLowerCase().includes(query) || 
+        student.roll_number.toLowerCase().includes(query)
+      ));
+    } else {
+      setFilteredStudents(sorted);
+    }
+  };
+  
+  // Render sort icon
+  const renderSortIcon = (field) => {
+    if (field !== sortField) {
+      return <span className="ms-1 text-muted">↕</span>;
+    }
+    return sortDirection === 'asc' 
+      ? <span className="ms-1">↑</span>
+      : <span className="ms-1">↓</span>;
   };
   
   const handleDeleteStudent = async (id) => {
@@ -188,18 +273,27 @@ const StudentsList = () => {
   const handleToggleAttendance = async (student) => {
     try {
       if (student.isPresentToday) {
-        // If student is already marked present, we need to remove the attendance
-        // This might require a new API endpoint to remove attendance
-        alert('Attendance removal is not supported yet. Please contact the administrator.');
+        // If student is already marked present, remove the attendance
+        await attendanceAPI.deleteByStudentAndDate(student.id, today);
+        // Update local state
+        const updatedStudents = students.map(s => 
+          s.id === student.id ? { ...s, isPresentToday: false } : s
+        );
+        const sorted = sortStudents(updatedStudents, sortField, sortDirection);
+        setStudents(sorted);
+        // Reapply filtering
+        filterStudents();
       } else {
         // Mark student as present
         await attendanceAPI.markByAdmin(student.id, today);
         // Update local state
-        setStudents(prevStudents => 
-          prevStudents.map(s => 
-            s.id === student.id ? { ...s, isPresentToday: true } : s
-          )
+        const updatedStudents = students.map(s => 
+          s.id === student.id ? { ...s, isPresentToday: true } : s
         );
+        const sorted = sortStudents(updatedStudents, sortField, sortDirection);
+        setStudents(sorted);
+        // Reapply filtering
+        filterStudents();
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update attendance');
@@ -228,82 +322,132 @@ const StudentsList = () => {
       {students.length === 0 ? (
         <div className="alert alert-info">No students found. Add your first student!</div>
       ) : (
-        <div className="table-responsive">
-          <table className="table table-striped">
-            <thead>
-              <tr>
-                <th>Roll</th>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Gender</th>
-                <th>Age</th>
-                <th>Present Today</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {students.map(student => (
-                <tr key={student.id}>
-                  <td>{student.roll_number}</td>
-                  <td>{student.name}</td>
-                  <td>{student.type || '-'}</td>
-                  <td>{student.gender || '-'}</td>
-                  <td>{student.age || '-'}</td>
-                  <td className="text-center">
-                    <div className="form-check d-inline-block">
-                      <input
-                        type="checkbox"
-                        className="form-check-input"
-                        checked={student.isPresentToday}
-                        onChange={() => handleToggleAttendance(student)}
-                        id={`attendance-${student.id}`}
-                      />
-                      <label 
-                        className="form-check-label" 
-                        htmlFor={`attendance-${student.id}`}
-                        style={{ cursor: "pointer" }}
-                      >
-                        {student.isPresentToday ? 'Present' : 'Absent'}
-                      </label>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="btn-group btn-group-sm">
-                      <Link 
-                        to={`/dashboard/students/attendance/${student.id}`}
-                        className="btn btn-outline-info"
-                        title="View attendance history"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                          <path d="M4 11a1 1 0 1 1 0-2h8a1 1 0 1 1 0 2H4zm0-4a1 1 0 1 1 0-2h8a1 1 0 1 1 0 2H4zm0-4a1 1 0 0 1 0-2h8a1 1 0 1 1 0 2H4z"/>
-                        </svg>
-                      </Link>
-                      <Link 
-                        to={`/dashboard/students/edit/${student.id}`}
-                        className="btn btn-outline-warning"
-                        title="Edit student"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                          <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
-                        </svg>
-                      </Link>
-                      <button 
-                        className="btn btn-outline-danger"
-                        onClick={() => handleDeleteStudent(student.id)}
-                        title="Delete student"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                          <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-                          <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="mb-3">
+            <div className="input-group">
+              <span className="input-group-text">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                </svg>
+              </span>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Search by name or roll number..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                style={{ outline: 'none', boxShadow: 'none' }}
+              />
+              {searchQuery && (
+                <button 
+                  className="btn btn-outline-secondary" 
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {filteredStudents.length < students.length && (
+              <small className="text-muted">
+                Showing {filteredStudents.length} of {students.length} students
+              </small>
+            )}
+          </div>
+          
+          {filteredStudents.length === 0 ? (
+            <div className="alert alert-info">No students match your search query.</div>
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-striped">
+                <thead>
+                  <tr>
+                    <th style={{ cursor: 'pointer' }} onClick={() => handleSort('roll_number')}>
+                      Roll {renderSortIcon('roll_number')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => handleSort('name')}>
+                      Name {renderSortIcon('name')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => handleSort('type')}>
+                      Type {renderSortIcon('type')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => handleSort('gender')}>
+                      Gender {renderSortIcon('gender')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => handleSort('age')}>
+                      Age {renderSortIcon('age')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => handleSort('isPresentToday')}>
+                      Present Today {renderSortIcon('isPresentToday')}
+                    </th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredStudents.map(student => (
+                    <tr key={student.id}>
+                      <td>{student.roll_number}</td>
+                      <td>{student.name}</td>
+                      <td>{student.type || '-'}</td>
+                      <td>{student.gender || '-'}</td>
+                      <td>{student.age || '-'}</td>
+                      <td className="text-center">
+                        <div className="form-check d-inline-block">
+                          <input
+                            type="checkbox"
+                            className="form-check-input"
+                            checked={student.isPresentToday}
+                            onChange={() => handleToggleAttendance(student)}
+                            id={`attendance-${student.id}`}
+                          />
+                          <label 
+                            className="form-check-label" 
+                            htmlFor={`attendance-${student.id}`}
+                            style={{ cursor: "pointer" }}
+                          >
+                            {student.isPresentToday ? 'Present' : 'Absent'}
+                          </label>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="btn-group btn-group-sm">
+                          <Link 
+                            to={`/dashboard/students/attendance/${student.id}`}
+                            className="btn btn-outline-info"
+                            title="View attendance history"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                              <path d="M4 11a1 1 0 1 1 0-2h8a1 1 0 1 1 0 2H4zm0-4a1 1 0 1 1 0-2h8a1 1 0 1 1 0 2H4zm0-4a1 1 0 0 1 0-2h8a1 1 0 1 1 0 2H4z"/>
+                            </svg>
+                          </Link>
+                          <Link 
+                            to={`/dashboard/students/edit/${student.id}`}
+                            className="btn btn-outline-warning"
+                            title="Edit student"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                              <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+                            </svg>
+                          </Link>
+                          <button 
+                            className="btn btn-outline-danger"
+                            onClick={() => handleDeleteStudent(student.id)}
+                            title="Delete student"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                              <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                              <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

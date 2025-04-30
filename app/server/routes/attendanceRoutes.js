@@ -31,4 +31,7 @@ router.get('/report/monthly-summary/:year/:month', attendanceController.getMonth
 // Delete attendance record
 router.delete('/:id', attendanceController.deleteAttendance);
 
+// Delete attendance by student ID and date
+router.delete('/student/:student_id', attendanceController.deleteAttendanceByStudentAndDate);
+
 module.exports = router; 
