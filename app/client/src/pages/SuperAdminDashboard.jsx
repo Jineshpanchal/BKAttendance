@@ -160,121 +160,6 @@ const SuperAdminDashboard = () => {
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="row">
-                    <div className="col-md-6">
-                      <div className="card mb-4">
-                        <div className="card-header bg-success text-white">Attendance Statistics</div>
-                        <div className="card-body">
-                          <div className="mb-3">
-                            <h6>All Time</h6>
-                            <p><strong>Total Students:</strong> {centerDetails.student_count}</p>
-                            <p><strong>Days with Attendance:</strong> {centerDetails.attendance_days}</p>
-                            <p><strong>Total Attendances:</strong> {centerDetails.total_attendances}</p>
-                          </div>
-                          <div>
-                            <h6>Last 30 Days</h6>
-                            <p><strong>Active Days:</strong> {centerDetails.active_days_last_month}</p>
-                            <p><strong>Attendances:</strong> {centerDetails.attendances_last_month}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="col-md-6">
-                      {centerDetails.typeDistribution && centerDetails.typeDistribution.length > 0 && (
-                        <div className="card mb-4">
-                          <div className="card-header bg-warning text-dark">Student Type Distribution</div>
-                          <div className="card-body">
-                            <div className="table-responsive">
-                              <table className="table table-bordered">
-                                <thead>
-                                  <tr>
-                                    <th>Type</th>
-                                    <th>Count</th>
-                                    <th>Percentage</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {centerDetails.typeDistribution.map(item => (
-                                    <tr key={item.type || 'unspecified'}>
-                                      <td>{item.type || 'Not specified'}</td>
-                                      <td>{item.count}</td>
-                                      <td>
-                                        {centerDetails.student_count ? 
-                                          `${((item.count / centerDetails.student_count) * 100).toFixed(1)}%` : 
-                                          'N/A'}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {centerDetails.attendanceTrend && centerDetails.attendanceTrend.length > 0 && (
-                    <div className="card mb-4">
-                      <div className="card-header bg-primary text-white">Monthly Attendance Trend</div>
-                      <div className="card-body">
-                        <div className="table-responsive">
-                          <table className="table table-bordered table-striped">
-                            <thead>
-                              <tr>
-                                <th>Month</th>
-                                <th>Active Days</th>
-                                <th>Total Attendances</th>
-                                <th>Avg. Attendances/Day</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {centerDetails.attendanceTrend.map(item => (
-                                <tr key={item.month}>
-                                  <td>{item.month}</td>
-                                  <td>{item.days_with_attendance}</td>
-                                  <td>{item.total_attendances}</td>
-                                  <td>
-                                    {item.days_with_attendance ? 
-                                      (item.total_attendances / item.days_with_attendance).toFixed(1) : 
-                                      'N/A'}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {centerDetails.dailyAttendance && centerDetails.dailyAttendance.length > 0 && (
-                    <div className="card mb-4">
-                      <div className="card-header bg-secondary text-white">Recent Daily Attendance</div>
-                      <div className="card-body">
-                        <div className="table-responsive" style={{ maxHeight: '300px', overflow: 'auto' }}>
-                          <table className="table table-sm table-bordered table-hover">
-                            <thead className="sticky-top bg-light">
-                              <tr>
-                                <th>Date</th>
-                                <th>Attendances</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {centerDetails.dailyAttendance.map(item => (
-                                <tr key={item.date}>
-                                  <td>{item.date}</td>
-                                  <td>{item.attendance_count}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </>
               )}
             </div>
@@ -361,9 +246,7 @@ const SuperAdminDashboard = () => {
                             <th>Center ID</th>
                             <th>Name</th>
                             <th>Address</th>
-                            <th>Students</th>
                             <th>URL</th>
-                            <th>Attendance Days</th>
                             <th>Last Active</th>
                             <th>Created On</th>
                             <th>Actions</th>
@@ -376,9 +259,7 @@ const SuperAdminDashboard = () => {
                               <td>{center.center_id}</td>
                               <td>{center.name}</td>
                               <td>{center.address || '-'}</td>
-                              <td>{center.student_count || 0}</td>
                               <td><code>/attendance/{center.center_id}</code></td>
-                              <td>{center.attendance_days || 0}</td>
                               <td>{center.last_activity_date ? new Date(center.last_activity_date).toLocaleDateString() : 'Never'}</td>
                               <td>{new Date(center.created_at).toLocaleDateString()}</td>
                               <td>
