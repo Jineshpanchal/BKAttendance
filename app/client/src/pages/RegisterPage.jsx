@@ -85,7 +85,7 @@ const RegisterPage = () => {
             title="Center ID can only contain letters, numbers, hyphens and underscores"
           />
           <div className="form-text">
-            This ID will be used for login and sharing attendance links
+            Write any number or word to login to the center
           </div>
         </div>
         
