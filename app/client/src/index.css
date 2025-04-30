@@ -1,0 +1,305 @@
+:root {
+  --primary-color: #3f51b5;
+  --secondary-color: #f50057;
+  --light-bg: #f5f5f5;
+  --dark-bg: #303030;
+  --text-light: #ffffff;
+  --text-dark: #333333;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--light-bg);
+  color: var(--text-dark);
+}
+
+#root {
+  /* Removed height, display, align-items, justify-content */
+}
+
+/* Styles specific to the Attendance Page wrapper */
+.attendance-page-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
+  overflow: hidden; /* Keep overflow hidden only for this page */
+  box-sizing: border-box;
+  padding: 10px;
+}
+
+.auth-container {
+  max-width: 400px;
+  margin: 60px auto; /* Restore standard margin */
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-container {
+  max-width: 1200px;
+  margin: 20px auto; /* Standard margin */
+  padding: 20px;
+}
+
+/* Keypad container within the Attendance Page */
+.keypad-container {
+  width: 100%;
+  max-width: 450px;
+  margin: 0 auto; /* Centered within wrapper */
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  position: relative; /* For positioning the logout icon */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+  height: auto; /* Let height be determined by content */
+  max-height: 90vh; /* Prevent excessive height */
+}
+
+/* Responsive container adapts to keypad-container */
+.responsive-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1; /* Allow this to grow */
+  min-height: 0; /* Override previous min-height */
+}
+
+/* Media queries for responsive design */
+@media (min-width: 768px) {
+  .keypad-container {
+    max-width: 500px;
+    padding: 20px;
+  }
+}
+
+@media (min-width: 992px) {
+  .keypad-container {
+    max-width: 550px;
+  }
+}
+
+/* Updated center header styling */
+.center-header {
+  margin-bottom: 10px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.center-name {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 0;
+  margin-top: 5px;
+}
+
+.attendance-subheader {
+  font-size: 14px;
+  color: #666;
+  margin-top: 0;
+  margin-bottom: 5px;
+}
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: min(2vw, 12px);
+  margin: 10px 0;
+  flex: 1;
+  align-items: stretch; /* Allow items to stretch vertically */
+  justify-content: center;
+}
+
+/* All buttons adapt height to fill space */
+.keypad-button {
+  /* aspect-ratio: 1/1; Removed to allow dynamic height */
+  background-color: var(--primary-color);
+  color: var(--text-light);
+  border: none;
+  border-radius: 8px;
+  padding: 5px; /* Small padding for text */
+  font-size: clamp(24px, 5vh, 36px); /* Font size responsive to viewport height */
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  width: 100%; /* Fill the grid cell */
+  min-height: 60px; /* Minimum height for touch targets */
+}
+
+/* Desktop optimization */
+@media (min-width: 768px) and (min-height: 600px) {
+  .keypad-button {
+    min-height: 70px;
+  }
+}
+
+/* Large desktop screens */
+@media (min-width: 1200px) and (min-height: 800px) {
+  .keypad-container {
+    max-width: 600px;
+    padding: 25px;
+  }
+  
+  .keypad {
+    gap: 15px;
+  }
+  
+  .keypad-button {
+    min-height: 80px;
+  }
+}
+
+.keypad-button:active {
+  transform: scale(0.97);
+}
+
+.keypad-button:hover {
+  background-color: #303f9f;
+}
+
+.keypad-button:disabled {
+  background-color: #9fa8da;
+  cursor: not-allowed;
+}
+
+/* Different button colors only */
+.submit-button {
+  background-color: #4caf50;
+}
+
+.submit-button:hover {
+  background-color: #388e3c;
+}
+
+.clear-button {
+  background-color: #f44336;
+}
+
+.clear-button:hover {
+  background-color: #d32f2f;
+}
+
+.keypad-display {
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: clamp(40px, 4vw, 32px);
+  font-weight: bold;
+  text-align: center;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Compact password screen */
+.password-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0;
+  flex-grow: 1;
+}
+
+.password-title {
+  font-size: 24px;
+  margin-bottom: 20px;
+  font-weight: bold;
+}
+
+.password-input-container {
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.password-input {
+  width: 100%;
+  padding: 15px;
+  font-size: 18px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.password-button {
+  width: 100%;
+  padding: 15px;
+  font-size: 18px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+/* Logout icon styling */
+.logout-icon {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  cursor: pointer;
+  font-size: 24px;
+  color: #888;
+  transition: color 0.3s;
+  z-index: 10;
+}
+
+.logout-icon:hover {
+  color: #f44336;
+}
+
+/* Toast message styling - fixed position at bottom */
+.toast-container {
+  position: fixed;
+  bottom: 15px;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: 90%;
+  max-width: 450px;
+  z-index: 1000;
+}
+
+.toast-message {
+  padding: 10px 15px;
+  border-radius: 4px;
+  font-weight: bold;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.toast-success {
+  background-color: #dff0d8;
+  color: #3c763d;
+  border: 1px solid #d6e9c6;
+}
+
+.toast-error {
+  background-color: #f2dede;
+  color: #a94442;
+  border: 1px solid #ebccd1;
+} 

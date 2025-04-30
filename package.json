@@ -1,0 +1,29 @@
+{
+  "name": "meditation-center-attendance",
+  "version": "1.0.0",
+  "description": "A multi-tenant web application for managing meditation center attendance",
+  "main": "app/server/index.js",
+  "scripts": {
+    "start": "node app/server/index.js",
+    "server": "nodemon app/server/index.js",
+    "client": "cd app/client && npm run start",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "init-db": "node app/server/config/initDb.js",
+    "build": "cd app/client && npm run build"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "file-saver": "^2.0.5",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.2",
+    "sqlite3": "^5.1.6",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.1",
+    "nodemon": "^3.0.1"
+  }
+}
