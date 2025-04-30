@@ -608,11 +608,22 @@ const AddEditStudent = () => {
             id="roll_number"
             name="roll_number"
             value={formData.roll_number}
-            onChange={handleChange}
+            onChange={(e) => {
+              // Only allow numbers and limit to 3 digits
+              const value = e.target.value.replace(/[^0-9]/g, '');
+              if (value.length <= 3) {
+                setFormData({
+                  ...formData,
+                  roll_number: value
+                });
+              }
+            }}
+            maxLength="3"
+            pattern="[0-9]{1,3}"
             placeholder="Leave empty for auto-assignment"
           />
           <div className="form-text">
-            Leave empty to auto-assign a 3-digit roll number, or enter custom roll number
+            Leave empty to auto-assign a 3-digit roll number, or enter a 3-digit roll number (001-999)
           </div>
         </div>
         

@@ -56,7 +56,7 @@ const RegisterPage = () => {
   
   return (
     <div className="auth-container">
-      <h2 className="text-center mb-4">Register Meditation Center</h2>
+      <h3 className="text-center mb-4">Register for Center Attendance</h3>
       
       {error && (
         <div className="alert alert-danger" role="alert">
