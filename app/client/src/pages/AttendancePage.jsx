@@ -277,51 +277,53 @@ const AttendancePage = () => {
   };
 
   const handleSubmit = async () => {
-    if (!rollNumber || rollNumber.length !== 3) { // Added length check
-      setMessage('Please enter a 3-digit roll number');
+    if (!rollNumber) {
+      setMessage('Please enter a roll number');
       setMessageType('error');
       return;
     }
-
+    
     setLoading(true);
+    setMessage('');
+    
     try {
+      // Normalize roll number - pad with leading zeros to 3 digits
+      // This ensures that "2", "02", and "002" are all treated as the same number
+      const normalizedRollNumber = rollNumber.padStart(3, '0');
+      
       const response = await attendanceAPI.markByRoll(
-        centerId, 
-        rollNumber,
-        isPasswordProtected ? attendancePassword : undefined
+        centerId,
+        normalizedRollNumber,
+        isPasswordProtected ? attendancePassword : null
       );
       
-      if (response.data.already_marked) {
-        // Already marked today
-        setMessage(`Attendance already marked for ${response.data.student_name}`);
-      } else {
-        // First time marking today
-        const timestamp = new Date(response.data.timestamp);
-        const formattedTime = timestamp.toLocaleTimeString();
-        setMessage(`Attendance marked for ${response.data.student_name} at ${formattedTime}`);
-      }
-      
+      // Show success message with student name
+      setMessage(response.data.message);
       setMessageType('success');
-      // Clear roll number after successful submission
+      
+      // Clear the roll number field to prepare for next entry
       setRollNumber('');
     } catch (err) {
       console.error('Error marking attendance:', err);
       
-      // Check if the error is due to password required again
-      if (err.response?.data?.password_protected === true && isPasswordProtected) {
-        sessionStorage.removeItem(`password_verified_${centerId}`);
-        setIsPasswordVerified(false); // Force re-verification
-        setMessage('Password verification required. Please enter password again.');
+      if (err.response?.status === 401) {
+        // Password issues
+        setMessage(err.response.data.message || 'Password verification failed');
         setMessageType('error');
+        
+        // If credentials have been invalidated, reset password verification
+        if (err.response.data.password_protected) {
+          setIsPasswordVerified(false);
+          // We should also clear session storage
+          sessionStorage.removeItem(`password_verified_${centerId}`);
+        }
       } else if (err.response?.status === 404) {
         // Student not found
-        setMessage('Student does not exist in database. Please check with Center Sister.');
+        setMessage(err.response.data.message || 'Student not found with this roll number');
         setMessageType('error');
       } else {
-        setMessage(
-          err.response?.data?.message || 
-          'Failed to mark attendance. Please try again.'
-        );
+        // Other errors
+        setMessage(err.response?.data?.message || 'An error occurred. Please try again.');
         setMessageType('error');
       }
     } finally {

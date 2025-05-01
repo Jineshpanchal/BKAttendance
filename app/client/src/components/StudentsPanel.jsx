@@ -612,9 +612,20 @@ const AddEditStudent = () => {
               // Only allow numbers and limit to 3 digits
               const value = e.target.value.replace(/[^0-9]/g, '');
               if (value.length <= 3) {
+                // Store the raw number for now
                 setFormData({
                   ...formData,
                   roll_number: value
+                });
+              }
+            }}
+            onBlur={(e) => {
+              // When field loses focus, format with leading zeros
+              if (formData.roll_number) {
+                const normalizedValue = formData.roll_number.padStart(3, '0');
+                setFormData({
+                  ...formData,
+                  roll_number: normalizedValue
                 });
               }
             }}
@@ -623,7 +634,7 @@ const AddEditStudent = () => {
             placeholder="Leave empty for auto-assignment"
           />
           <div className="form-text">
-            Leave empty to auto-assign a 3-digit roll number, or enter a 3-digit roll number (001-999)
+            Leave empty to auto-assign a 3-digit roll number, or enter a number (will be stored as 001-999 format)
           </div>
         </div>
         

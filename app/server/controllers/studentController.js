@@ -17,6 +17,9 @@ exports.createStudent = (req, res) => {
     return res.status(400).json({ message: 'Valid student type is required' });
   }
 
+  // Normalize roll number if provided
+  const normalizedRollNumber = roll_number ? Student.normalizeRollNumber(roll_number) : null;
+
   // Check for duplicate names
   Student.findByName(name, center_id, (err, existingStudents) => {
     if (err) {
@@ -47,15 +50,15 @@ exports.createStudent = (req, res) => {
     }
 
     // If roll number is provided, check if it already exists
-    if (roll_number) {
-      Student.findByRollNumber(roll_number, center_id, (err, existingStudent) => {
+    if (normalizedRollNumber) {
+      Student.findByRollNumber(normalizedRollNumber, center_id, (err, existingStudent) => {
         if (err) {
           return res.status(500).json({ message: 'Error checking roll number', error: err.message });
         }
         
         if (existingStudent) {
           return res.status(400).json({ 
-            message: `Roll number ${roll_number} is already assigned to student: ${existingStudent.name}`
+            message: `Roll number ${normalizedRollNumber} is already assigned to student: ${existingStudent.name}`
           });
         }
         
@@ -69,7 +72,14 @@ exports.createStudent = (req, res) => {
   });
 
   function createNewStudent() {
-    Student.create({ name, gender, age, center_id, roll_number, type }, (err, result) => {
+    Student.create({ 
+      name, 
+      gender, 
+      age, 
+      center_id, 
+      roll_number: normalizedRollNumber, 
+      type 
+    }, (err, result) => {
       if (err) {
         return res.status(500).json({ message: 'Error creating student', error: err.message });
       }
@@ -154,6 +164,9 @@ exports.updateStudent = (req, res) => {
     return res.status(400).json({ message: 'Valid student type is required' });
   }
   
+  // Normalize roll number if provided
+  const normalizedRollNumber = roll_number ? Student.normalizeRollNumber(roll_number) : null;
+  
   // First check if student exists and belongs to this center
   Student.findById(id, (err, student) => {
     if (err) {
@@ -209,15 +222,15 @@ exports.updateStudent = (req, res) => {
 
     function checkRollNumber() {
       // If roll number is changed, check if the new roll number is unique
-      if (roll_number && roll_number !== student.roll_number) {
-        Student.findByRollNumber(roll_number, req.center.center_id, (err, existingStudent) => {
+      if (normalizedRollNumber && normalizedRollNumber !== student.roll_number) {
+        Student.findByRollNumber(normalizedRollNumber, req.center.center_id, (err, existingStudent) => {
           if (err) {
             return res.status(500).json({ message: 'Error checking roll number', error: err.message });
           }
           
           if (existingStudent) {
             return res.status(400).json({ 
-              message: `Roll number ${roll_number} is already assigned to student: ${existingStudent.name}`
+              message: `Roll number ${normalizedRollNumber} is already assigned to student: ${existingStudent.name}`
             });
           }
           
@@ -231,7 +244,7 @@ exports.updateStudent = (req, res) => {
     }
 
     function updateExistingStudent() {
-      Student.update(id, { name, gender, age, roll_number, type }, (err, result) => {
+      Student.update(id, { name, gender, age, roll_number: normalizedRollNumber, type }, (err, result) => {
         if (err) {
           return res.status(500).json({ message: 'Error updating student', error: err.message });
         }
@@ -326,14 +339,14 @@ exports.importStudents = async (req, res) => {
       const row = studentData[i];
       const rowNum = i + 2; // Excel row number (1-based, plus header)
 
-      const roll_number = String(row[rollNumberIndex] || '').trim();
+      const rawRollNumber = String(row[rollNumberIndex] || '').trim();
       const name = String(row[nameIndex] || '').trim();
       const gender = (genderIndex >= 0 && row[genderIndex]) ? String(row[genderIndex]).trim() : null;
       const age = (ageIndex >= 0 && row[ageIndex] && !isNaN(parseInt(row[ageIndex], 10))) ? parseInt(row[ageIndex], 10) : null;
       const type = (typeIndex >= 0 && row[typeIndex]) ? String(row[typeIndex]).trim() : null;
       
       // --- Validation --- 
-      if (!roll_number) {
+      if (!rawRollNumber) {
         results.errors.push(`Row ${rowNum}: Roll number is required.`);
         results.errorCount++;
         continue;
@@ -348,14 +361,23 @@ exports.importStudents = async (req, res) => {
         results.errorCount++;
         continue;
       }
-      if (!/^\d{3}$/.test(roll_number)) {
-        results.errors.push(`Row ${rowNum}: Roll number must be exactly 3 digits.`);
+      
+      // Validate roll number is numeric
+      if (!/^\d+$/.test(rawRollNumber)) {
+        results.errors.push(`Row ${rowNum}: Roll number must contain only numeric digits.`);
         results.errorCount++;
         continue;
       }
-
+      
+      // Normalize the roll number
+      const roll_number = Student.normalizeRollNumber(rawRollNumber);
+      
       // Check for duplicate roll number within the file itself (to avoid issues in batch insert)
-      if (studentData.slice(0, i).some(prevRow => String(prevRow[rollNumberIndex] || '').trim() === roll_number)) {
+      const previousRollNumbers = studentData.slice(0, i).map(prevRow => 
+        Student.normalizeRollNumber(String(prevRow[rollNumberIndex] || '').trim())
+      );
+      
+      if (previousRollNumbers.includes(roll_number)) {
         results.errors.push(`Row ${rowNum}: Duplicate roll number (${roll_number}) found within the file.`);
         results.errorCount++;
         continue;

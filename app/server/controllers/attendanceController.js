@@ -53,8 +53,11 @@ exports.markAttendanceByRoll = (req, res) => {
       }
     }
     
-    // Find student by roll number
-    Student.findByRollNumber(roll_number, center_id, (err, student) => {
+    // Normalize the roll number for consistent lookup
+    const normalizedRollNumber = Student.normalizeRollNumber(roll_number);
+    
+    // Find student by normalized roll number
+    Student.findByRollNumber(normalizedRollNumber, center_id, (err, student) => {
       if (err) {
         return res.status(500).json({ message: 'Error finding student', error: err.message });
       }

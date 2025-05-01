@@ -60,12 +60,25 @@ class Student {
   
   // Find student by roll number and center
   static findByRollNumber(roll_number, center_id, callback) {
+    // Normalize roll number by removing leading zeros and then padding to 3 digits
+    const normalizedRollNumber = this.normalizeRollNumber(roll_number);
+    
+    // Query using normalized roll number
     const sql = `SELECT * FROM students WHERE roll_number = ? AND center_id = ?`;
     
-    db.get(sql, [roll_number, center_id], (err, student) => {
+    db.get(sql, [normalizedRollNumber, center_id], (err, student) => {
       if (err) return callback(err);
       callback(null, student);
     });
+  }
+  
+  // Helper method to normalize roll numbers (e.g., "2", "02", and "002" all become "002")
+  static normalizeRollNumber(roll_number) {
+    if (!roll_number) return null;
+    
+    // Convert to string, remove leading zeros, then pad to 3 digits
+    const numericValue = parseInt(roll_number, 10).toString();
+    return numericValue.padStart(3, '0');
   }
   
   // Find student by ID
@@ -107,6 +120,14 @@ class Student {
   
   // Search students by roll number or name
   static searchStudents(searchTerm, center_id, callback) {
+    // If the search term could be a roll number (contains only digits),
+    // normalize it for searching
+    let normalizedSearchTerm = searchTerm;
+    if (/^\d+$/.test(searchTerm)) {
+      // This might be a roll number, so let's normalize it
+      normalizedSearchTerm = this.normalizeRollNumber(searchTerm);
+    }
+    
     const sql = `
       SELECT * FROM students 
       WHERE center_id = ? 
@@ -117,7 +138,7 @@ class Student {
       ORDER BY roll_number
     `;
     
-    const searchPattern = `%${searchTerm}%`;
+    const searchPattern = `%${normalizedSearchTerm}%`;
     
     db.all(sql, [center_id, searchPattern, searchPattern], (err, students) => {
       if (err) return callback(err);
