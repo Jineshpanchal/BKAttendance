@@ -120,12 +120,11 @@ class Student {
   
   // Search students by roll number or name
   static searchStudents(searchTerm, center_id, callback) {
-    // If the search term could be a roll number (contains only digits),
-    // normalize it for searching
-    let normalizedSearchTerm = searchTerm;
+    // Normalize the search term ONLY if it looks like a roll number
+    let normalizedRollSearchTerm = searchTerm; // Default to original for name search
     if (/^\d+$/.test(searchTerm)) {
-      // This might be a roll number, so let's normalize it
-      normalizedSearchTerm = this.normalizeRollNumber(searchTerm);
+      // If it's all digits, normalize it for the roll number search
+      normalizedRollSearchTerm = this.normalizeRollNumber(searchTerm);
     }
     
     const sql = `
@@ -138,9 +137,11 @@ class Student {
       ORDER BY roll_number
     `;
     
-    const searchPattern = `%${normalizedSearchTerm}%`;
+    // Use the normalized term for roll number search, original for name search
+    const rollSearchPattern = `%${normalizedRollSearchTerm}%`; 
+    const nameSearchPattern = `%${searchTerm}%`; // Use original searchTerm here
     
-    db.all(sql, [center_id, searchPattern, searchPattern], (err, students) => {
+    db.all(sql, [center_id, rollSearchPattern, nameSearchPattern], (err, students) => {
       if (err) return callback(err);
       callback(null, students);
     });
