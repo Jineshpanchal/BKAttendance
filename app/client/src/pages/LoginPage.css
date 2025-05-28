@@ -252,4 +252,378 @@
     width: 80%;
     height: 80%;
   }
+}
+
+/* Spiritual Login Page Styles */
+.spiritual-login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, 
+    #e8f5e8 0%,     /* Soft sage green */
+    #f0e6ff 25%,    /* Lavender mist */
+    #fff0f5 50%,    /* Soft rose */
+    #e6f3ff 75%,    /* Sky blue */
+    #f5f0e8 100%    /* Warm cream */
+  );
+  animation: backgroundShift 20s ease-in-out infinite;
+}
+
+@keyframes backgroundShift {
+  0%, 100% {
+    background: linear-gradient(135deg, 
+      #e8f5e8 0%, #f0e6ff 25%, #fff0f5 50%, #e6f3ff 75%, #f5f0e8 100%);
+  }
+  50% {
+    background: linear-gradient(135deg, 
+      #f0e6ff 0%, #e6f3ff 25%, #e8f5e8 50%, #fff0f5 75%, #f5f0e8 100%);
+  }
+}
+
+/* Animated background elements */
+.spiritual-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.floating-lotus {
+  position: absolute;
+  font-size: 2rem;
+  opacity: 0.3;
+  animation: float 8s ease-in-out infinite;
+}
+
+.lotus-1 {
+  top: 20%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.lotus-2 {
+  top: 60%;
+  right: 15%;
+  animation-delay: 3s;
+}
+
+.lotus-3 {
+  bottom: 20%;
+  left: 20%;
+  animation-delay: 6s;
+}
+
+.floating-om {
+  position: absolute;
+  font-size: 1.5rem;
+  opacity: 0.2;
+  animation: rotate 15s linear infinite;
+}
+
+.om-1 {
+  top: 30%;
+  right: 20%;
+  animation-delay: 2s;
+}
+
+.om-2 {
+  bottom: 30%;
+  right: 30%;
+  animation-delay: 8s;
+}
+
+.meditation-circle {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, 
+    rgba(255, 255, 255, 0.1) 0%, 
+    rgba(255, 255, 255, 0.05) 50%, 
+    transparent 100%);
+  animation: pulse 6s ease-in-out infinite;
+}
+
+.circle-1 {
+  width: 200px;
+  height: 200px;
+  top: 10%;
+  right: 10%;
+  animation-delay: 0s;
+}
+
+.circle-2 {
+  width: 150px;
+  height: 150px;
+  bottom: 15%;
+  left: 15%;
+  animation-delay: 2s;
+}
+
+.circle-3 {
+  width: 100px;
+  height: 100px;
+  top: 50%;
+  left: 5%;
+  animation-delay: 4s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(5deg);
+  }
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.2;
+  }
+}
+
+/* Main card */
+.spiritual-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 24px;
+  padding: 3rem 2.5rem;
+  width: 90%;
+  max-width: 480px;
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  position: relative;
+  z-index: 10;
+  animation: cardAppear 1s ease-out;
+}
+
+@keyframes cardAppear {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Header section */
+.spiritual-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.lotus-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  animation: lotusGlow 3s ease-in-out infinite;
+}
+
+@keyframes lotusGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 10px rgba(255, 182, 193, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(255, 182, 193, 0.8));
+  }
+}
+
+.spiritual-title {
+  font-size: 2.5rem;
+  font-weight: 300;
+  background: linear-gradient(135deg, #6b46c1, #8b5cf6, #a855f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0.5rem 0;
+  letter-spacing: 1px;
+}
+
+.spiritual-subtitle {
+  font-size: 1.1rem;
+  color: #6b7280;
+  margin: 0.5rem 0;
+  font-weight: 400;
+}
+
+.divider-line {
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, #f472b6, #a855f7, #3b82f6);
+  margin: 1.5rem auto;
+  border-radius: 1px;
+}
+
+.spiritual-description {
+  font-size: 1rem;
+  color: #4b5563;
+  margin: 1rem 0;
+  line-height: 1.6;
+  font-style: italic;
+}
+
+.spiritual-instruction {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin: 1rem 0;
+}
+
+/* Error styling */
+.spiritual-error {
+  background: linear-gradient(135deg, rgba(254, 202, 202, 0.8), rgba(252, 165, 165, 0.6));
+  color: #dc2626;
+  padding: 1rem;
+  border-radius: 12px;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.error-icon {
+  margin-right: 0.5rem;
+}
+
+/* Sign-in section */
+.spiritual-signin-section {
+  margin: 2rem 0;
+}
+
+.google-signin-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.google-signin-wrapper > div {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.3s ease !important;
+}
+
+.google-signin-wrapper > div:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Loading animation */
+.spiritual-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e5e7eb;
+  border-top: 2px solid #8b5cf6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Footer section */
+.spiritual-footer {
+  text-align: center;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(156, 163, 175, 0.2);
+}
+
+.zen-quote {
+  font-size: 0.9rem;
+  color: #6b7280;
+  font-style: italic;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(243, 244, 246, 0.3));
+  border-radius: 12px;
+  border-left: 3px solid #a855f7;
+}
+
+.onboarding-text {
+  font-size: 0.9rem;
+  color: #4b5563;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+  .spiritual-card {
+    padding: 2rem 1.5rem;
+    margin: 1rem;
+    border-radius: 20px;
+  }
+  
+  .spiritual-title {
+    font-size: 2rem;
+  }
+  
+  .lotus-icon {
+    font-size: 2.5rem;
+  }
+  
+  .floating-lotus {
+    font-size: 1.5rem;
+  }
+  
+  .floating-om {
+    font-size: 1.2rem;
+  }
+  
+  .meditation-circle {
+    display: none; /* Hide circles on mobile for better performance */
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  .spiritual-login-container,
+  .floating-lotus,
+  .floating-om,
+  .meditation-circle,
+  .lotus-icon,
+  .loading-spinner {
+    animation: none;
+  }
+  
+  .spiritual-card {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 } 

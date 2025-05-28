@@ -57,52 +57,42 @@ const LoginPage = ({ onLogin }) => {
     setError('Google sign-in was cancelled or failed.');
   };
 
-  // Lighter colors and no animations
-  const containerStyle = {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-    overflow: 'hidden',
-    position: 'relative'
-  };
-
-  const cardStyle = {
-    background: 'rgba(255, 255, 255, 0.95)',
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-    borderRadius: '16px',
-    width: '90%',
-    maxWidth: '420px',
-    padding: '40px',
-    zIndex: 10,
-    position: 'relative'
-  };
-  
   return (
-    <div style={containerStyle} className="login-container">
-      <div style={cardStyle} className="login-card">
-        <div className="login-header">
-          <h1 style={{fontSize: '30px', color: '#3a3a3a', marginBottom: '10px', fontWeight: 600, textAlign: 'center'}}>Welcome</h1>
-          <p style={{color: '#5a5a5a', fontSize: '16px', marginTop: 0, textAlign: 'center'}} className="subtitle">Meditation Center Attendance</p>
-          <p style={{color: '#666', fontSize: '14px', marginTop: '15px', textAlign: 'center'}}>
-            Sign in with your @bkivv.org or @gmail.com email to access your meditation center
+    <div className="spiritual-login-container">
+      {/* Animated background elements */}
+      <div className="spiritual-bg">
+        <div className="floating-lotus lotus-1">🪷</div>
+        <div className="floating-lotus lotus-2">🪷</div>
+        <div className="floating-lotus lotus-3">🪷</div>
+        <div className="floating-om om-1">🕉️</div>
+        <div className="floating-om om-2">🕉️</div>
+        <div className="meditation-circle circle-1"></div>
+        <div className="meditation-circle circle-2"></div>
+        <div className="meditation-circle circle-3"></div>
+      </div>
+
+      {/* Main content */}
+      <div className="spiritual-card">
+        <div className="spiritual-header">
+          <div className="lotus-icon">🪷</div>
+          <h1 className="spiritual-title">Welcome</h1>
+          <p className="spiritual-subtitle">Meditation Center Attendance Portal</p>
+          <div className="divider-line"></div>
+          <p className="spiritual-instruction">
+            Sign in with your @bkivv.org or @gmail.com email
           </p>
         </div>
         
-        {error && <div style={{
-          backgroundColor: 'rgba(244, 67, 54, 0.1)',
-          color: '#d32f2f',
-          padding: '12px',
-          borderRadius: '8px',
-          textAlign: 'center',
-          marginBottom: '20px',
-          fontSize: '14px'
-        }}>{error}</div>}
+        {error && (
+          <div className="spiritual-error">
+            <span className="error-icon">⚠️</span>
+            {error}
+          </div>
+        )}
         
         {/* Google Sign-In Section */}
-        <div style={{marginBottom: '20px'}}>
-          <div style={{display: 'flex', justifyContent: 'center'}}>
+        <div className="spiritual-signin-section">
+          <div className="google-signin-wrapper">
             <GoogleLogin
               onSuccess={handleGoogleSuccess}
               onError={handleGoogleError}
@@ -114,15 +104,19 @@ const LoginPage = ({ onLogin }) => {
             />
           </div>
           {loading && (
-            <div style={{textAlign: 'center', marginTop: '15px', color: '#666', fontSize: '14px'}}>
-              Signing you in...
+            <div className="spiritual-loading">
+              <div className="loading-spinner"></div>
+              <span>Connecting your spiritual journey...</span>
             </div>
           )}
         </div>
 
-        <div style={{textAlign: 'center', marginTop: '30px', color: '#757575', fontSize: '14px'}}>
-          <p>
-            First time here? Sign in with Google to set up your meditation center
+        <div className="spiritual-footer">
+          <div className="zen-quote">
+            "मुरली ही ब्राह्मण जीवन की साँस है। साँस नहीं तो जीवन नहीं" – अव्यक्त बापदादा, 7 दिसम्बर 1983"
+          </div>
+          <p className="onboarding-text">
+            ✨ First time here? Sign in with Google to create your meditation center
           </p>
         </div>
       </div>
