@@ -1,25 +1,47 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { authAPI } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 
-const RegisterPage = () => {
+const SetupPage = ({ onLogin }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const googleUserInfo = location.state?.googleUserInfo;
   
   const [formData, setFormData] = useState({
     center_id: '',
     name: '',
-    password: '',
     address: '',
     contact: '',
-    email: ''
+    email: googleUserInfo?.email || ''
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   
+  useEffect(() => {
+    // Redirect if no Google user info
+    if (!googleUserInfo) {
+      navigate('/');
+      return;
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      email: googleUserInfo.email,
+      name: googleUserInfo.name || ''
+    }));
+  }, [googleUserInfo, navigate]);
+  
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    
+    // If changing center_id, only allow numbers
+    if (name === 'center_id') {
+      const numbersOnly = value.replace(/[^0-9]/g, '');
+      setFormData({ ...formData, [name]: numbersOnly });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
   
   const handleSubmit = async (e) => {
@@ -29,29 +51,33 @@ const RegisterPage = () => {
     setLoading(true);
     
     try {
-      // Regular registration
-      await authAPI.register(formData);
-      
-      setSuccess('Registration successful! You can now login with your Center ID and password.');
-      
-      // Clear form
-      setFormData({
-        center_id: '',
-        name: '',
-        password: '',
-        address: '',
-        contact: '',
-        email: ''
+      // Complete Google OAuth registration
+      const response = await axios.post('/api/google-auth/complete-registration', {
+        email: formData.email,
+        center_id: formData.center_id,
+        center_name: formData.name,
+        address: formData.address,
+        contact: formData.contact
       });
       
-      // Redirect to login after 2 seconds
+      setSuccess('Setup successful! Redirecting to your dashboard...');
+      
+      // Store token and center info
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('center', JSON.stringify(response.data.center));
+      
+      // Notify parent component of successful login
+      onLogin();
+      
+      // Redirect to dashboard after 2 seconds
       setTimeout(() => {
-        navigate('/');
+        navigate('/dashboard');
       }, 2000);
+      
     } catch (err) {
       setError(
         err.response?.data?.message || 
-        'Registration failed. Please try again with different information.'
+        'Setup failed. Please try again with different information.'
       );
     } finally {
       setLoading(false);
@@ -101,20 +127,20 @@ const RegisterPage = () => {
       <div style={cardStyle}>
         <div style={{textAlign: 'center', marginBottom: '30px'}}>
           <h1 style={{fontSize: '28px', color: '#3a3a3a', marginBottom: '10px', fontWeight: 600}}>
-            Legacy Registration
+            Set Up Your Center
           </h1>
           <p style={{color: '#5a5a5a', fontSize: '16px', margin: 0}}>
-            Traditional registration with email and password
+            Complete your meditation center setup
           </p>
           <div style={{
-            backgroundColor: 'rgba(255, 193, 7, 0.1)',
-            color: '#f57c00',
+            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+            color: '#388e3c',
             padding: '10px',
             borderRadius: '8px',
             marginTop: '15px',
             fontSize: '14px'
           }}>
-            ⚠️ Recommended: <Link to="/" style={{color: '#4a90e2', textDecoration: 'none', fontWeight: 600}}>Sign in with Google</Link> for easier setup
+            ✓ Signed in as {googleUserInfo?.email}
           </div>
         </div>
         
@@ -148,21 +174,7 @@ const RegisterPage = () => {
         
         <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
           <div style={{display: 'flex', flexDirection: 'column'}}>
-            <label htmlFor="email" style={labelStyle}>Email</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              style={inputStyle}
-              placeholder="your.email@example.com"
-            />
-          </div>
-
-          <div style={{display: 'flex', flexDirection: 'column'}}>
-            <label htmlFor="center_id" style={labelStyle}>Center ID</label>
+            <label htmlFor="center_id" style={labelStyle}>Center ID *</label>
             <div style={{position: 'relative'}}>
               <span style={{position: 'absolute', left: '12px', top: '12px', opacity: 0.5}}>🏠</span>
               <input
@@ -172,14 +184,16 @@ const RegisterPage = () => {
                 value={formData.center_id}
                 onChange={handleChange}
                 required
-                pattern="[a-zA-Z0-9-_]+"
-                title="Center ID can only contain letters, numbers, hyphens and underscores"
+                pattern="[0-9]+"
+                title="Center ID must contain only numbers"
                 style={{...inputStyle, paddingLeft: '40px'}}
-                placeholder="e.g., bk-mumbai, center-delhi"
+                placeholder="e.g., 1234, 5678"
+                minLength="1"
+                maxLength="10"
               />
             </div>
             <div style={{fontSize: '12px', color: '#777', marginTop: '4px'}}>
-              This will be your unique center URL: /attendance/<strong>{formData.center_id || 'your-center-id'}</strong>
+              Numbers only. This will be your unique center URL: /attendance/<strong>{formData.center_id || 'your-center-id'}</strong>
             </div>
           </div>
           
@@ -195,24 +209,6 @@ const RegisterPage = () => {
               style={inputStyle}
               placeholder="e.g., BK Mumbai Center"
             />
-          </div>
-          
-          <div style={{display: 'flex', flexDirection: 'column'}}>
-            <label htmlFor="password" style={labelStyle}>Password</label>
-            <div style={{position: 'relative'}}>
-              <span style={{position: 'absolute', left: '12px', top: '12px', opacity: 0.5}}>🔒</span>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                minLength="6"
-                style={{...inputStyle, paddingLeft: '40px'}}
-                placeholder="Minimum 6 characters"
-              />
-            </div>
           </div>
           
           <div style={{display: 'flex', flexDirection: 'column'}}>
@@ -256,13 +252,14 @@ const RegisterPage = () => {
             }}
             disabled={loading}
           >
-            {loading ? 'Registering...' : 'Register'}
+            {loading ? 'Setting up...' : 'Complete Setup'}
           </button>
         </form>
         
-        <div style={{textAlign: 'center', marginTop: '30px', color: '#757575', fontSize: '14px'}}>
+        <div style={{textAlign: 'center', marginTop: '20px', color: '#757575', fontSize: '12px'}}>
           <p>
-            Already have an account? <Link to="/" style={{color: '#4a90e2', textDecoration: 'none', fontWeight: 600}}>Login</Link>
+            After setup, your attendance page will be available at:<br/>
+            <strong>localhost:3000/attendance/{formData.center_id || 'your-center-id'}</strong>
           </p>
         </div>
       </div>
@@ -270,4 +267,4 @@ const RegisterPage = () => {
   );
 };
 
-export default RegisterPage; 
+export default SetupPage; 

@@ -5,6 +5,7 @@ require('dotenv').config();
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
+const googleAuthRoutes = require('./routes/auth');
 const studentRoutes = require('./routes/studentRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
@@ -19,6 +20,7 @@ app.use(express.json());
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/google-auth', googleAuthRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/superadmin', superAdminRoutes);

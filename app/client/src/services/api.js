@@ -27,6 +27,7 @@ export const authAPI = {
   register: (centerData) => api.post('/auth/register', centerData),
   login: (credentials) => api.post('/auth/login', credentials),
   getProfile: () => api.get('/auth/profile'),
+  updateProfile: (profileData) => api.put('/google-auth/update-profile', profileData),
   updateLoginPassword: (passwordData) => api.post('/auth/update-password', passwordData),
   getAttendancePasswordSettings: () => api.get('/auth/attendance-password'),
   updateAttendancePasswordSettings: (settings) => {

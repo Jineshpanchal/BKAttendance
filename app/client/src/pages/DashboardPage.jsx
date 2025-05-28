@@ -23,6 +23,7 @@ const DashboardPage = ({ onLogout }) => {
   
   const getAttendanceLink = () => {
     if (!center) return '';
+    console.log('Generating attendance link for center:', center); // Debug log
     const baseUrl = window.location.origin;
     return `${baseUrl}/attendance/${center.center_id}`;
   };
@@ -79,7 +80,7 @@ const DashboardPage = ({ onLogout }) => {
       <div className="row">
         <div className="col-12">
           <Routes>
-            <Route path="/" element={<DashboardHome center={center} attendanceLink={getAttendanceLink()} />} />
+            <Route path="/" element={<DashboardHome center={center} setCenter={setCenter} attendanceLink={getAttendanceLink()} />} />
             <Route path="/students/*" element={<StudentsPanel />} />
             <Route path="/reports/*" element={<ReportsPanel />} />
           </Routes>
@@ -90,34 +91,48 @@ const DashboardPage = ({ onLogout }) => {
 };
 
 // Home component for dashboard
-const DashboardHome = ({ center, attendanceLink }) => {
+const DashboardHome = ({ center, setCenter, attendanceLink }) => {
+  // Profile editing state
+  const [profileData, setProfileData] = useState({
+    center_id: '',
+    name: '',
+    address: '',
+    contact: '',
+    email: ''
+  });
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileMessage, setProfileMessage] = useState('');
+  const [profileMessageType, setProfileMessageType] = useState('');
+
+  // Attendance link editing state
+  const [isEditingLink, setIsEditingLink] = useState(false);
+  const [editableCenterId, setEditableCenterId] = useState('');
+
+  // Password settings state
   const [passwordSettings, setPasswordSettings] = useState({
     attendance_password: '',
     attendance_password_enabled: false
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState(''); // 'success' or 'error'
-  const [showPassword, setShowPassword] = useState(false); // State for password visibility
-  
-  // State for login password reset
-  const [loginPasswordData, setLoginPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-    showCurrentPassword: false,
-    showNewPassword: false,
-    loading: false,
-    message: '',
-    messageType: ''
-  });
-  
-  // State to track if the password reset section is expanded
-  const [passwordResetExpanded, setPasswordResetExpanded] = useState(false);
+  const [messageType, setMessageType] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   
   useEffect(() => {
+    if (center) {
+      console.log('Center data in dashboard:', center); // Debug log
+      setProfileData({
+        center_id: center.center_id || '',
+        name: center.name || '',
+        address: center.address || '',
+        contact: center.contact || '',
+        email: center.email || ''
+      });
+      setEditableCenterId(center.center_id || '');
+    }
     fetchPasswordSettings();
-  }, []);
+  }, [center]);
   
   const fetchPasswordSettings = async () => {
     try {
@@ -127,7 +142,151 @@ const DashboardHome = ({ center, attendanceLink }) => {
       console.error('Error fetching password settings:', err);
     }
   };
-  
+
+  // Generate dynamic attendance link
+  const getDynamicAttendanceLink = () => {
+    const baseUrl = window.location.origin;
+    const centerId = isEditingLink ? editableCenterId : (profileData.center_id || center?.center_id);
+    return `${baseUrl}/attendance/${centerId || 'your-center-id'}`;
+  };
+
+  // Profile editing functions
+  const handleProfileChange = (e) => {
+    const { name, value } = e.target;
+    
+    // If changing center_id, validate numbers only
+    if (name === 'center_id') {
+      const numbersOnly = value.replace(/[^0-9]/g, '');
+      setProfileData({
+        ...profileData,
+        [name]: numbersOnly
+      });
+      // Update editable center ID for real-time link update
+      setEditableCenterId(numbersOnly);
+    } else {
+      setProfileData({
+        ...profileData,
+        [name]: value
+      });
+    }
+  };
+
+  // Handle attendance link center ID change
+  const handleLinkCenterIdChange = (e) => {
+    const value = e.target.value.replace(/[^0-9]/g, ''); // Numbers only
+    setEditableCenterId(value);
+  };
+
+  const saveProfile = async () => {
+    setProfileLoading(true);
+    setProfileMessage('');
+    setProfileMessageType('');
+    
+    try {
+      // Validate center_id
+      if (!profileData.center_id) {
+        setProfileMessage('Center ID is required');
+        setProfileMessageType('error');
+        setProfileLoading(false);
+        return;
+      }
+
+      // Call the API to update the profile in the database
+      const response = await authAPI.updateProfile({
+        center_id: profileData.center_id,
+        name: profileData.name,
+        address: profileData.address,
+        contact: profileData.contact
+      });
+      
+      // Update localStorage with the new center data
+      const updatedCenter = {
+        ...center,
+        center_id: response.data.center.center_id,
+        name: response.data.center.name,
+        address: response.data.center.address,
+        contact: response.data.center.contact
+      };
+      
+      localStorage.setItem('center', JSON.stringify(updatedCenter));
+      localStorage.setItem('token', response.data.token); // Update token with new center_id
+      
+      setCenter(updatedCenter);
+      setEditableCenterId(response.data.center.center_id);
+      setIsEditingProfile(false);
+      setProfileMessage('Profile updated successfully!');
+      setProfileMessageType('success');
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      setProfileMessage(
+        err.response?.data?.message || 'Error updating profile. Please try again.'
+      );
+      setProfileMessageType('error');
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const cancelProfileEdit = () => {
+    setProfileData({
+      center_id: center?.center_id || '',
+      name: center?.name || '',
+      address: center?.address || '',
+      contact: center?.contact || '',
+      email: center?.email || ''
+    });
+    setEditableCenterId(center?.center_id || '');
+    setIsEditingProfile(false);
+    setProfileMessage('');
+    setProfileMessageType('');
+  };
+
+  // Attendance link editing functions
+  const saveAttendanceLink = async () => {
+    if (!editableCenterId) {
+      alert('Center ID cannot be empty');
+      return;
+    }
+    
+    try {
+      // Call the API to update the center_id in the database
+      const response = await authAPI.updateProfile({
+        center_id: editableCenterId,
+        name: profileData.name,
+        address: profileData.address,
+        contact: profileData.contact
+      });
+      
+      // Update the profile data and center with new data from server
+      const updatedProfileData = {
+        ...profileData,
+        center_id: response.data.center.center_id
+      };
+      
+      const updatedCenter = {
+        ...center,
+        center_id: response.data.center.center_id,
+        name: response.data.center.name,
+        address: response.data.center.address,
+        contact: response.data.center.contact
+      };
+      
+      setProfileData(updatedProfileData);
+      localStorage.setItem('center', JSON.stringify(updatedCenter));
+      localStorage.setItem('token', response.data.token); // Update token with new center_id
+      setCenter(updatedCenter);
+      setIsEditingLink(false);
+    } catch (err) {
+      console.error('Error updating center ID:', err);
+      alert(err.response?.data?.message || 'Error updating center ID. Please try again.');
+    }
+  };
+
+  const cancelLinkEdit = () => {
+    setEditableCenterId(center?.center_id || profileData.center_id || '');
+    setIsEditingLink(false);
+  };
+
   const handlePasswordChange = (e) => {
     const { name, value, type, checked } = e.target;
     setPasswordSettings({
@@ -136,118 +295,12 @@ const DashboardHome = ({ center, attendanceLink }) => {
     });
   };
   
-  // Handle login password change
-  const handleLoginPasswordChange = (e) => {
-    const { name, value } = e.target;
-    setLoginPasswordData({
-      ...loginPasswordData,
-      [name]: value,
-      message: '', // Clear messages on input change
-      messageType: ''
-    });
-  };
-  
-  // Toggle password visibility
-  const togglePasswordVisibility = (field) => {
-    setLoginPasswordData({
-      ...loginPasswordData,
-      [field]: !loginPasswordData[field]
-    });
-  };
-  
-  // Toggle password reset section expansion
-  const togglePasswordResetSection = () => {
-    setPasswordResetExpanded(!passwordResetExpanded);
-  };
-  
-  // Update login password
-  const updateLoginPassword = async () => {
-    // Reset message
-    setLoginPasswordData({
-      ...loginPasswordData,
-      message: '',
-      messageType: '',
-      loading: true
-    });
-    
-    // Validate input
-    if (!loginPasswordData.currentPassword) {
-      setLoginPasswordData({
-        ...loginPasswordData,
-        message: 'Current password is required',
-        messageType: 'error',
-        loading: false
-      });
-      return;
-    }
-    
-    if (!loginPasswordData.newPassword) {
-      setLoginPasswordData({
-        ...loginPasswordData,
-        message: 'New password is required',
-        messageType: 'error',
-        loading: false
-      });
-      return;
-    }
-    
-    if (loginPasswordData.newPassword.length < 6) {
-      setLoginPasswordData({
-        ...loginPasswordData,
-        message: 'New password must be at least 6 characters long',
-        messageType: 'error',
-        loading: false
-      });
-      return;
-    }
-    
-    if (loginPasswordData.newPassword !== loginPasswordData.confirmPassword) {
-      setLoginPasswordData({
-        ...loginPasswordData,
-        message: 'New password and confirmation do not match',
-        messageType: 'error',
-        loading: false
-      });
-      return;
-    }
-    
-    try {
-      // Make API call
-      await authAPI.updateLoginPassword({
-        currentPassword: loginPasswordData.currentPassword,
-        newPassword: loginPasswordData.newPassword
-      });
-      
-      // Update state on success
-      setLoginPasswordData({
-        ...loginPasswordData,
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-        message: 'Password updated successfully',
-        messageType: 'success',
-        loading: false
-      });
-    } catch (err) {
-      // Handle error
-      console.error('Error updating login password:', err);
-      
-      setLoginPasswordData({
-        ...loginPasswordData,
-        message: err.response?.data?.message || 'Error updating password. Please try again.',
-        messageType: 'error',
-        loading: false
-      });
-    }
-  };
-  
   const savePasswordSettings = async () => {
     setLoading(true);
-    setMessage(''); // Clear message before saving
+    setMessage('');
     setMessageType('');
     
     try {
-      // Basic client-side validation
       if (passwordSettings.attendance_password_enabled && !passwordSettings.attendance_password) {
         setMessage('Password is required when protection is enabled');
         setMessageType('error');
@@ -255,29 +308,15 @@ const DashboardHome = ({ center, attendanceLink }) => {
         return;
       }
       
-      // Log what we're sending for debugging
-      console.log('Sending password settings:', JSON.stringify(passwordSettings));
-      
-      // Make the API call
-      const response = await authAPI.updateAttendancePasswordSettings({
+      await authAPI.updateAttendancePasswordSettings({
         attendance_password: passwordSettings.attendance_password || '',
         attendance_password_enabled: passwordSettings.attendance_password_enabled
       });
       
-      console.log('Server response:', response.data);
-      
-      // Update UI
       setMessage('Password settings updated successfully');
       setMessageType('success');
-      
-      // Refresh settings from server
       await fetchPasswordSettings();
     } catch (err) {
-      // Detailed error logging
-      console.error('Error updating password settings:', err);
-      console.error('Error response:', err.response?.data);
-      
-      // Show error message
       setMessage(
         err.response?.data?.message || 
         'Error updating attendance password settings. Please try again.'
@@ -289,109 +328,129 @@ const DashboardHome = ({ center, attendanceLink }) => {
   };
   
   return (
-    <div className="jumbotron p-4 bg-light rounded-3">
-      <h1>Welcome, {center?.name}!</h1>
-      <p className="lead">
-        Manage your meditation center's attendance with this simple application.
-      </p>
+    <div className="container-fluid">
+      <div className="jumbotron p-4 bg-light rounded-3 mb-4">
+        <h1>Welcome, {center?.name}!</h1>
+        <p className="lead">
+          Manage your meditation center's attendance with this simple application.
+        </p>
+      </div>
       
-      <hr />
-      
-      <div className="row mt-4">
+      <div className="row">
+        {/* Left Column - Profile & Quick Navigation */}
         <div className="col-md-6">
+          {/* Center Profile Section */}
           <div className="card mb-4">
-            <div className="card-header">
-              <h5>Attendance Link</h5>
-            </div>
-            <div className="card-body">
-              <p>Share this link with your students to mark their attendance:</p>
-              <div className="input-group">
-                <input 
-                  type="text" 
-                  className="form-control" 
-                  value={attendanceLink} 
-                  readOnly 
-                />
+            <div className="card-header d-flex justify-content-between align-items-center">
+              <h5 className="mb-0">Center Profile</h5>
+              {!isEditingProfile && (
                 <button 
-                  className="btn btn-outline-primary" 
-                  onClick={() => navigator.clipboard.writeText(attendanceLink)}
+                  className="btn btn-sm btn-outline-primary"
+                  onClick={() => setIsEditingProfile(true)}
                 >
-                  Copy
+                  Edit
                 </button>
-              </div>
-            </div>
-          </div>
-          
-          <div className="card mb-4">
-            <div className="card-header">
-              <h5>Attendance Password Protection</h5>
+              )}
             </div>
             <div className="card-body">
-              <p>Set a password to protect your attendance link:</p>
+              {profileMessage && (
+                <div className={`alert alert-${profileMessageType === 'success' ? 'success' : 'danger'} mb-3`}>
+                  {profileMessage}
+                </div>
+              )}
               
-              <div className="form-check mb-3">
-                <input
-                  type="checkbox"
-                  className="form-check-input"
-                  id="attendance_password_enabled"
-                  name="attendance_password_enabled"
-                  checked={passwordSettings.attendance_password_enabled}
-                  onChange={handlePasswordChange}
-                />
-                <label className="form-check-label" htmlFor="attendance_password_enabled">
-                  Enable password protection
-                </label>
+              <div className="mb-3">
+                <label className="form-label"><strong>Center Name</strong></label>
+                {isEditingProfile ? (
+                  <input
+                    type="text"
+                    className="form-control"
+                    name="name"
+                    value={profileData.name}
+                    onChange={handleProfileChange}
+                  />
+                ) : (
+                  <p className="form-control-plaintext">{profileData.name || 'Not set'}</p>
+                )}
               </div>
               
               <div className="mb-3">
-                <label htmlFor="attendance_password" className="form-label">
-                  Attendance Password
-                </label>
-                <div className="input-group">
-                <input
-                    type={showPassword ? 'text' : 'password'} // Toggle type
-                  className="form-control"
-                  id="attendance_password"
-                  name="attendance_password"
-                  value={passwordSettings.attendance_password || ''}
-                  onChange={handlePasswordChange}
-                  disabled={!passwordSettings.attendance_password_enabled}
-                  required={passwordSettings.attendance_password_enabled}
-                />
-                  <button 
-                    className="btn btn-outline-secondary" 
-                    type="button" 
-                    onClick={() => setShowPassword(!showPassword)} // Toggle visibility
-                    disabled={!passwordSettings.attendance_password_enabled}
-                  >
-                    {showPassword ? 'Hide' : 'Show'} 
-                  </button>
-                </div>
-                <div className="form-text">
-                  {passwordSettings.attendance_password_enabled
-                    ? 'Students will need to enter this password to mark their attendance'
-                    : 'Enable password protection to set a password'}
-                </div>
+                <label className="form-label"><strong>Center ID</strong></label>
+                {isEditingProfile ? (
+                  <input
+                    type="text"
+                    className="form-control"
+                    name="center_id"
+                    value={profileData.center_id}
+                    onChange={handleProfileChange}
+                    placeholder="Enter center ID (numbers only)"
+                  />
+                ) : (
+                  <p className="form-control-plaintext">{profileData.center_id || 'Not set'}</p>
+                )}
+                {isEditingProfile && (
+                  <small className="text-muted">Only numbers are allowed for Center ID</small>
+                )}
               </div>
               
-              <button
-                className="btn btn-primary"
-                onClick={savePasswordSettings}
-                disabled={loading || (passwordSettings.attendance_password_enabled && !passwordSettings.attendance_password)}
-              >
-                {loading ? 'Saving...' : 'Save Settings'}
-              </button>
+              <div className="mb-3">
+                <label className="form-label"><strong>Email</strong></label>
+                <p className="form-control-plaintext">{profileData.email || 'Not set'}</p>
+                <small className="text-muted">Email cannot be changed (Google OAuth)</small>
+              </div>
               
-              {message && (
-                <div className={`alert alert-${messageType === 'success' ? 'success' : 'danger'} mt-3`}>
-                  {message}
+              <div className="mb-3">
+                <label className="form-label"><strong>Address</strong></label>
+                {isEditingProfile ? (
+                  <textarea
+                    className="form-control"
+                    name="address"
+                    value={profileData.address}
+                    onChange={handleProfileChange}
+                    rows="3"
+                  />
+                ) : (
+                  <p className="form-control-plaintext">{profileData.address || 'Not set'}</p>
+                )}
+              </div>
+              
+              <div className="mb-3">
+                <label className="form-label"><strong>Contact</strong></label>
+                {isEditingProfile ? (
+                  <input
+                    type="text"
+                    className="form-control"
+                    name="contact"
+                    value={profileData.contact}
+                    onChange={handleProfileChange}
+                  />
+                ) : (
+                  <p className="form-control-plaintext">{profileData.contact || 'Not set'}</p>
+                )}
+              </div>
+              
+              {isEditingProfile && (
+                <div className="d-flex gap-2">
+                  <button
+                    className="btn btn-primary"
+                    onClick={saveProfile}
+                    disabled={profileLoading}
+                  >
+                    {profileLoading ? 'Saving...' : 'Save Changes'}
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={cancelProfileEdit}
+                    disabled={profileLoading}
+                  >
+                    Cancel
+                  </button>
                 </div>
               )}
             </div>
           </div>
-        </div>
-        
-        <div className="col-md-6">
+          
+          {/* Quick Navigation */}
           <div className="card mb-4">
             <div className="card-header">
               <h5>Quick Navigation</h5>
@@ -407,93 +466,145 @@ const DashboardHome = ({ center, attendanceLink }) => {
               </div>
             </div>
           </div>
-          
+        </div>
+        
+        {/* Right Column - Attendance Link & Password Protection */}
+        <div className="col-md-6">
           <div className="card mb-4">
-            <div className="card-header bg-warning text-dark" 
-                 onClick={togglePasswordResetSection} 
-                 style={{ cursor: 'pointer' }}>
-              <div className="d-flex justify-content-between align-items-center">
-                <h5 className="mb-0">Reset Admin Password</h5>
-                <span>{passwordResetExpanded ? '▲' : '▼'}</span>
-              </div>
+            <div className="card-header">
+              <h5>Attendance Link & Security</h5>
             </div>
-            {passwordResetExpanded && (
-              <div className="card-body">
-                <p>Change your admin dashboard login password:</p>
-                
-                <div className="mb-3">
-                  <label htmlFor="currentPassword" className="form-label">Current Password</label>
+            <div className="card-body">
+              {/* Attendance Link Section */}
+              <div className="mb-4">
+                <label className="form-label"><strong>Share this link with your students:</strong></label>
+                {isEditingLink ? (
+                  <div>
+                    <div className="mb-2">
+                      <label className="form-label small">Center ID (numbers only):</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={editableCenterId}
+                        onChange={handleLinkCenterIdChange}
+                        placeholder="Enter center ID"
+                      />
+                    </div>
+                    <div className="mb-2">
+                      <label className="form-label small">Preview:</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={getDynamicAttendanceLink()}
+                        readOnly
+                      />
+                    </div>
+                    <div className="d-flex gap-2">
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={saveAttendanceLink}
+                      >
+                        Save
+                      </button>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={cancelLinkEdit}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
                   <div className="input-group">
-                    <input
-                      type={loginPasswordData.showCurrentPassword ? 'text' : 'password'}
-                      className="form-control"
-                      id="currentPassword"
-                      name="currentPassword"
-                      value={loginPasswordData.currentPassword}
-                      onChange={handleLoginPasswordChange}
-                      placeholder="Enter your current password"
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      value={getDynamicAttendanceLink()} 
+                      readOnly 
                     />
                     <button 
-                      className="btn btn-outline-secondary" 
-                      type="button" 
-                      onClick={() => togglePasswordVisibility('showCurrentPassword')}
+                      className="btn btn-outline-primary" 
+                      onClick={() => navigator.clipboard.writeText(getDynamicAttendanceLink())}
                     >
-                      {loginPasswordData.showCurrentPassword ? 'Hide' : 'Show'}
+                      Copy
                     </button>
-                  </div>
-                </div>
-                
-                <div className="mb-3">
-                  <label htmlFor="newPassword" className="form-label">New Password</label>
-                  <div className="input-group">
-                    <input
-                      type={loginPasswordData.showNewPassword ? 'text' : 'password'}
-                      className="form-control"
-                      id="newPassword"
-                      name="newPassword"
-                      value={loginPasswordData.newPassword}
-                      onChange={handleLoginPasswordChange}
-                      placeholder="Enter new password (min 6 characters)"
-                    />
                     <button 
                       className="btn btn-outline-secondary" 
-                      type="button" 
-                      onClick={() => togglePasswordVisibility('showNewPassword')}
+                      onClick={() => setIsEditingLink(true)}
                     >
-                      {loginPasswordData.showNewPassword ? 'Hide' : 'Show'}
+                      Edit
                     </button>
-                  </div>
-                  <div className="form-text">Password must be at least 6 characters long</div>
-                </div>
-                
-                <div className="mb-3">
-                  <label htmlFor="confirmPassword" className="form-label">Confirm New Password</label>
-                  <input
-                    type="password"
-                    className="form-control"
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    value={loginPasswordData.confirmPassword}
-                    onChange={handleLoginPasswordChange}
-                    placeholder="Confirm your new password"
-                  />
-                </div>
-                
-                <button
-                  className="btn btn-warning"
-                  onClick={updateLoginPassword}
-                  disabled={loginPasswordData.loading}
-                >
-                  {loginPasswordData.loading ? 'Updating...' : 'Update Password'}
-                </button>
-                
-                {loginPasswordData.message && (
-                  <div className={`alert alert-${loginPasswordData.messageType === 'success' ? 'success' : 'danger'} mt-3`}>
-                    {loginPasswordData.message}
                   </div>
                 )}
               </div>
-            )}
+              
+              <hr />
+              
+              {/* Password Protection Section */}
+              <div>
+                <label className="form-label"><strong>Password Protection</strong></label>
+                <p className="text-muted small">Protect your attendance link with a password</p>
+                
+                <div className="form-check mb-3">
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    id="attendance_password_enabled"
+                    name="attendance_password_enabled"
+                    checked={passwordSettings.attendance_password_enabled}
+                    onChange={handlePasswordChange}
+                  />
+                  <label className="form-check-label" htmlFor="attendance_password_enabled">
+                    Enable password protection
+                  </label>
+                </div>
+                
+                <div className="mb-3">
+                  <label htmlFor="attendance_password" className="form-label">
+                    Attendance Password
+                  </label>
+                  <div className="input-group">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      className="form-control"
+                      id="attendance_password"
+                      name="attendance_password"
+                      value={passwordSettings.attendance_password || ''}
+                      onChange={handlePasswordChange}
+                      disabled={!passwordSettings.attendance_password_enabled}
+                      required={passwordSettings.attendance_password_enabled}
+                    />
+                    <button 
+                      className="btn btn-outline-secondary" 
+                      type="button" 
+                      onClick={() => setShowPassword(!showPassword)}
+                      disabled={!passwordSettings.attendance_password_enabled}
+                    >
+                      {showPassword ? 'Hide' : 'Show'} 
+                    </button>
+                  </div>
+                  <div className="form-text">
+                    {passwordSettings.attendance_password_enabled
+                      ? 'Students will need to enter this password to mark their attendance'
+                      : 'Enable password protection to set a password'}
+                  </div>
+                </div>
+                
+                <button
+                  className="btn btn-primary"
+                  onClick={savePasswordSettings}
+                  disabled={loading || (passwordSettings.attendance_password_enabled && !passwordSettings.attendance_password)}
+                >
+                  {loading ? 'Saving...' : 'Save Settings'}
+                </button>
+                
+                {message && (
+                  <div className={`alert alert-${messageType === 'success' ? 'success' : 'danger'} mt-3`}>
+                    {message}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>

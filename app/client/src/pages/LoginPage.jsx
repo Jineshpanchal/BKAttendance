@@ -1,47 +1,60 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authAPI } from '../services/api';
+import { GoogleLogin } from '@react-oauth/google';
+import axios from 'axios';
 import './LoginPage.css';
 
 const LoginPage = ({ onLogin }) => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    center_id: '',
-    password: ''
-  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-  
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    
+
+  const handleGoogleSuccess = async (credentialResponse) => {
     try {
-      const response = await authAPI.login(formData);
+      setError('');
+      setLoading(true);
       
-      // Store token and center info in localStorage
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('center', JSON.stringify(response.data.center));
+      console.log('Google sign-in successful, verifying token...');
       
-      // Notify parent component of successful login
-      onLogin();
+      const response = await axios.post('/api/google-auth/google-verify', {
+        token: credentialResponse.credential
+      });
       
-      // Redirect to dashboard
-      navigate('/dashboard');
+      console.log('Google verification response:', response.data);
+      
+      if (response.data.isNewUser) {
+        console.log('New user detected, redirecting to setup...');
+        // New user, redirect to setup page with pre-filled data
+        navigate('/setup', { 
+          state: { 
+            googleUserInfo: response.data.userInfo 
+          } 
+        });
+      } else {
+        console.log('Existing user detected, logging in...');
+        // Existing user, log them in
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('center', JSON.stringify(response.data.center));
+        
+        console.log('Token stored:', response.data.token ? 'Yes' : 'No');
+        console.log('Center data stored:', response.data.center);
+        
+        onLogin();
+        navigate('/dashboard');
+      }
     } catch (err) {
+      console.error('Google sign-in error:', err);
       setError(
         err.response?.data?.message || 
-        'Login failed. Please check your credentials and try again.'
+        'Google sign-in failed. Please try again.'
       );
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleError = () => {
+    setError('Google sign-in was cancelled or failed.');
   };
 
   // Lighter colors and no animations
@@ -72,6 +85,9 @@ const LoginPage = ({ onLogin }) => {
         <div className="login-header">
           <h1 style={{fontSize: '30px', color: '#3a3a3a', marginBottom: '10px', fontWeight: 600, textAlign: 'center'}}>Welcome</h1>
           <p style={{color: '#5a5a5a', fontSize: '16px', marginTop: 0, textAlign: 'center'}} className="subtitle">Meditation Center Attendance</p>
+          <p style={{color: '#666', fontSize: '14px', marginTop: '15px', textAlign: 'center'}}>
+            Sign in with your @bkivv.org or @gmail.com email to access your meditation center
+          </p>
         </div>
         
         {error && <div style={{
@@ -84,77 +100,33 @@ const LoginPage = ({ onLogin }) => {
           fontSize: '14px'
         }}>{error}</div>}
         
-        <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
-          <div style={{display: 'flex', flexDirection: 'column'}}>
-            <label htmlFor="center_id" style={{fontSize: '14px', color: '#555', marginBottom: '8px', fontWeight: 500}}>Center ID</label>
-            <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
-              <span style={{position: 'absolute', left: '12px', opacity: 0.5}}>🏠</span>
-              <input
-                type="text"
-                id="center_id"
-                name="center_id"
-                value={formData.center_id}
-                onChange={handleChange}
-                required
-                placeholder="Enter your center ID"
-                style={{
-                  width: '100%',
-                  padding: '12px 12px 12px 40px',
-                  border: '1px solid #ddd',
-                  borderRadius: '10px',
-                  fontSize: '16px',
-                  backgroundColor: '#ffffff'
-                }}
-              />
-            </div>
+        {/* Google Sign-In Section */}
+        <div style={{marginBottom: '20px'}}>
+          <div style={{display: 'flex', justifyContent: 'center'}}>
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              text="signin_with"
+              shape="rectangular"
+              theme="outline"
+              size="large"
+              width="100%"
+            />
           </div>
-          
-          <div style={{display: 'flex', flexDirection: 'column'}}>
-            <label htmlFor="password" style={{fontSize: '14px', color: '#555', marginBottom: '8px', fontWeight: 500}}>Password</label>
-            <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
-              <span style={{position: 'absolute', left: '12px', opacity: 0.5}}>🔒</span>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                placeholder="Enter your password"
-                style={{
-                  width: '100%',
-                  padding: '12px 12px 12px 40px',
-                  border: '1px solid #ddd',
-                  borderRadius: '10px',
-                  fontSize: '16px',
-                  backgroundColor: '#ffffff'
-                }}
-              />
+          {loading && (
+            <div style={{textAlign: 'center', marginTop: '15px', color: '#666', fontSize: '14px'}}>
+              Signing you in...
             </div>
-          </div>
-          
-          <button 
-            type="submit" 
-            style={{
-              marginTop: '10px',
-              padding: '14px',
-              border: 'none',
-              borderRadius: '10px',
-              background: '#4a90e2',
-              color: 'white',
-              fontSize: '16px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              boxShadow: '0 2px 10px rgba(74, 144, 226, 0.2)'
-            }}
-            disabled={loading}
-          >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-        
+          )}
+        </div>
+
         <div style={{textAlign: 'center', marginTop: '30px', color: '#757575', fontSize: '14px'}}>
-          <p>Don't have an account? <Link to="/register" style={{color: '#4a90e2', textDecoration: 'none', fontWeight: 600}}>Register</Link></p>
+          <p>
+            First time here? Sign in with Google to set up your meditation center
+          </p>
+          <p style={{marginTop: '10px'}}>
+            Or use <Link to="/register" style={{color: '#4a90e2', textDecoration: 'none', fontWeight: 600}}>legacy registration</Link> with email/password
+          </p>
         </div>
       </div>
     </div>

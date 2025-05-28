@@ -9,7 +9,8 @@ function initializeDatabase() {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     center_id TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
-    password TEXT NOT NULL,
+    password TEXT,
+    email TEXT,
     address TEXT,
     contact TEXT,
     attendance_password TEXT,
@@ -117,9 +118,10 @@ function checkAndAddColumns() {
       return;
     }
     
-    // Check if attendance_password column exists
+    // Check if columns exist
     const hasPasswordColumn = columns.some(col => col.name === 'attendance_password');
     const hasEnabledColumn = columns.some(col => col.name === 'attendance_password_enabled');
+    const hasEmailColumn = columns.some(col => col.name === 'email');
     
     // Add missing columns if needed
     if (!hasPasswordColumn) {
@@ -137,6 +139,23 @@ function checkAndAddColumns() {
         else console.log('Added attendance_password_enabled column successfully');
       });
     }
+    
+    if (!hasEmailColumn) {
+      console.log('Adding email column to centers table');
+      db.run(`ALTER TABLE centers ADD COLUMN email TEXT`, err => {
+        if (err) console.error('Error adding email column:', err.message);
+        else {
+          console.log('Added email column successfully');
+          // Create unique index for email after adding the column
+          db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_centers_email ON centers (email)`, err => {
+            if (err) console.error('Error creating email unique index:', err.message);
+            else console.log('Created unique index for email column');
+          });
+        }
+      });
+    }
+    
+    console.log('Database schema updated for Google OAuth compatibility');
   });
   
   // Check if timestamp column exists in attendance table
