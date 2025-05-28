@@ -9,6 +9,12 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'logo192.png', 'logo512.png'],
+      workbox: {
+        // Disable all caching strategies
+        skipWaiting: true,
+        clientsClaim: true,
+        runtimeCaching: []
+      },
       manifest: {
         name: 'Meditation Center Attendance',
         short_name: 'Attendance',

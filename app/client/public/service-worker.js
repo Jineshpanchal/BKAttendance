@@ -1,16 +1,14 @@
 // Service Worker for Meditation Center Attendance PWA
 
-const CACHE_NAME = 'attendance-app-v1';
+const CACHE_NAME = 'attendance-app-v2-no-cache';
 const urlsToCache = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/favicon.ico',
   '/logo192.png',
   '/logo512.png'
 ];
 
-// Install the service worker and cache the static assets
+// Install the service worker and cache only static assets
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -35,39 +33,30 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Intercept fetch requests and serve from cache when offline
+// Intercept fetch requests - NO CACHING for API calls and dynamic content
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Cache hit - return the response from cache
-        if (response) {
-          return response;
-        }
-        
-        // Clone the request because it's a one-time use stream
-        return fetch(event.request.clone()).then(
-          response => {
-            // Check if we received a valid response
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // Clone the response because it's a one-time use stream
-            const responseToCache = response.clone();
-
-            caches.open(CACHE_NAME)
-              .then(cache => {
-                cache.put(event.request, responseToCache);
-              });
-
-            return response;
-          }
-        );
-      })
-      .catch(() => {
-        // If both cache and network fail, show a generic fallback
-        return caches.match('/index.html');
-      })
-  );
+  const url = new URL(event.request.url);
+  
+  // Don't cache API requests or dynamic content
+  if (url.pathname.startsWith('/api/') || 
+      url.pathname.includes('dashboard') || 
+      url.pathname.includes('attendance') ||
+      event.request.method !== 'GET') {
+    // Always fetch from network for API calls and dynamic content
+    event.respondWith(fetch(event.request));
+    return;
+  }
+  
+  // Only cache static assets like icons and manifest
+  if (urlsToCache.includes(url.pathname)) {
+    event.respondWith(
+      caches.match(event.request)
+        .then(response => {
+          return response || fetch(event.request);
+        })
+    );
+  } else {
+    // For all other requests, always fetch from network
+    event.respondWith(fetch(event.request));
+  }
 }); 
