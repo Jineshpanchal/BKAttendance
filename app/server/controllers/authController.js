@@ -1,46 +1,6 @@
 const Center = require('../models/centerModel');
 const { generateToken } = require('../middleware/authMiddleware');
 
-// Register a new meditation center
-exports.register = (req, res) => {
-  const { center_id, name, password, address, contact } = req.body;
-  
-  // Validate required fields
-  if (!center_id || !name || !password) {
-    return res.status(400).json({ message: 'Center ID, name, and password are required' });
-  }
-  
-  // Check if center_id contains only allowed characters
-  if (!/^[a-zA-Z0-9-_]+$/.test(center_id)) {
-    return res.status(400).json({ 
-      message: 'Center ID can only contain letters, numbers, hyphens, and underscores'
-    });
-  }
-  
-  // Check if center already exists
-  Center.exists(center_id, (err, exists) => {
-    if (err) {
-      return res.status(500).json({ message: 'Database error', error: err.message });
-    }
-    
-    if (exists) {
-      return res.status(409).json({ message: 'Center ID is already taken' });
-    }
-    
-    // Create the new center
-    Center.create({ center_id, name, password, address, contact }, (err, result) => {
-      if (err) {
-        return res.status(500).json({ message: 'Error creating center', error: err.message });
-      }
-      
-      res.status(201).json({ 
-        message: 'Center registered successfully',
-        center_id: result.center_id
-      });
-    });
-  });
-};
-
 // Login to a meditation center
 exports.login = (req, res) => {
   const { center_id, password } = req.body;

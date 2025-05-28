@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 import './LoginPage.css';
@@ -123,9 +123,6 @@ const LoginPage = ({ onLogin }) => {
         <div style={{textAlign: 'center', marginTop: '30px', color: '#757575', fontSize: '14px'}}>
           <p>
             First time here? Sign in with Google to set up your meditation center
-          </p>
-          <p style={{marginTop: '10px'}}>
-            Or use <Link to="/register" style={{color: '#4a90e2', textDecoration: 'none', fontWeight: 600}}>legacy registration</Link> with email/password
           </p>
         </div>
       </div>

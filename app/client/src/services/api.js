@@ -36,7 +36,6 @@ api.interceptors.request.use(
 
 // Authentication API
 export const authAPI = {
-  register: (centerData) => api.post('/auth/register', centerData),
   login: (credentials) => api.post('/auth/login', credentials),
   getProfile: () => api.get('/auth/profile'),
   updateProfile: (profileData) => api.put('/google-auth/update-profile', profileData),

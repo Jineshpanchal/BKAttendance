@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
 import SetupPage from './pages/SetupPage';
 import DashboardPage from './pages/DashboardPage';
 import AttendancePage from './pages/AttendancePage';
@@ -90,7 +89,6 @@ function App() {
           path="/" 
           element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage onLogin={handleLogin} />} 
         />
-        <Route path="/register" element={<RegisterPage />} />
         <Route path="/setup" element={<SetupPage onLogin={handleLogin} />} />
         <Route path="/attendance/:centerId" element={<AttendancePage />} />
         

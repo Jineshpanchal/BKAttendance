@@ -3,9 +3,6 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const { verifyToken } = require('../middleware/authMiddleware');
 
-// Register a new meditation center
-router.post('/register', authController.register);
-
 // Login to a meditation center
 router.post('/login', authController.login);
 
