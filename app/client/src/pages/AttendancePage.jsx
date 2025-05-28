@@ -99,10 +99,12 @@ const KeypadUI = ({
   showLogout = false // Add prop to control logout visibility
 }) => (
   <div className="keypad-container responsive-container">
-    {showLogout && <LogoutIcon onLogout={onLogout} />}
     <div className="center-header">
-      <h2 className="center-name">{centerName}</h2>
-      <p className="attendance-subheader">Meditation Center Daily Attendance</p>
+      <div className="center-info">
+        <h2 className="center-name">{centerName}</h2>
+        <p className="attendance-subheader">Meditation Center Daily Attendance</p>
+      </div>
+      {showLogout && <LogoutIcon onLogout={onLogout} />}
     </div>
     
     <div className="keypad-display">
