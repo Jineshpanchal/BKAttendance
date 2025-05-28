@@ -49,11 +49,9 @@ const PasswordEntryUI = ({
   handleVerifyPassword, 
   loading, 
   message, 
-  messageType,
-  onLogout 
+  messageType
 }) => (
   <div className="keypad-container responsive-container">
-    <LogoutIcon onLogout={onLogout} />
     <div className="center-header">
       <h2 className="center-name">{centerName}</h2>
       <p className="attendance-subheader">Meditation Center Daily Attendance</p>
@@ -97,10 +95,11 @@ const KeypadUI = ({
   loading,
   message,
   messageType,
-  onLogout
+  onLogout,
+  showLogout = false // Add prop to control logout visibility
 }) => (
   <div className="keypad-container responsive-container">
-    <LogoutIcon onLogout={onLogout} />
+    {showLogout && <LogoutIcon onLogout={onLogout} />}
     <div className="center-header">
       <h2 className="center-name">{centerName}</h2>
       <p className="attendance-subheader">Meditation Center Daily Attendance</p>
@@ -338,7 +337,7 @@ const AttendancePage = () => {
     setIsPasswordVerified(false); // Update state to trigger re-render to password screen
     setAttendancePassword(''); // Clear password state
     setMessage('Logged out. Please enter password again.');
-    setMessageType('info'); // Use info or success for logout message
+    setMessageType('success'); // Use success for logout message
   };
   
   // Main render logic using external components
@@ -355,7 +354,6 @@ const AttendancePage = () => {
           loading={loading}
           message={message}
           messageType={messageType}
-          onLogout={handleLogout}
         />
       ) : (
         <KeypadUI 
@@ -368,6 +366,7 @@ const AttendancePage = () => {
           message={message}
           messageType={messageType}
           onLogout={handleLogout}
+          showLogout={isPasswordProtected}
         />
       )}
     </div>

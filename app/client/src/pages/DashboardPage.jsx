@@ -38,41 +38,58 @@ const DashboardPage = ({ onLogout }) => {
     <div className="dashboard-container">
       <nav className="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
         <div className="container-fluid">
-          <Link className="navbar-brand" to="/dashboard">
-            {center?.name || 'Meditation Center'} Dashboard
+          <Link className="navbar-brand fw-bold" to="/dashboard">
+            <i className="bi bi-house-door-fill me-2"></i>
+            <span className="d-none d-sm-inline">{center?.name || 'Meditation Center'}</span>
+            <span className="d-sm-none">Dashboard</span>
           </Link>
           
-          <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <button 
+            className="navbar-toggler" 
+            type="button" 
+            data-bs-toggle="collapse" 
+            data-bs-target="#navbarNav"
+            aria-controls="navbarNav"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+          >
             <span className="navbar-toggler-icon"></span>
           </button>
           
           <div className="collapse navbar-collapse" id="navbarNav">
-            <ul className="navbar-nav me-auto">
+            <ul className="navbar-nav me-auto mb-2 mb-lg-0">
               <li className="nav-item">
-                <Link className="nav-link" to="/dashboard/students">
-                  Manage Students
+                <Link className="nav-link px-3 py-2" to="/dashboard/students">
+                  <i className="bi bi-people-fill me-2"></i>
+                  Students
                 </Link>
               </li>
               <li className="nav-item">
-                <Link className="nav-link" to="/dashboard/reports">
+                <Link className="nav-link px-3 py-2" to="/dashboard/reports">
+                  <i className="bi bi-graph-up me-2"></i>
                   Reports
                 </Link>
               </li>
             </ul>
             
-            <button 
-              className="btn btn-outline-light me-2" 
-              onClick={copyAttendanceLink}
-            >
-              Copy Attendance Link
-            </button>
-            
-            <button 
-              className="btn btn-outline-light" 
-              onClick={handleLogout}
-            >
-              Logout
-            </button>
+            <div className="d-flex flex-column flex-lg-row gap-2">
+              <button 
+                className="btn btn-outline-light" 
+                onClick={copyAttendanceLink}
+              >
+                <i className="bi bi-link-45deg me-1"></i>
+                <span className="d-none d-sm-inline">Copy Attendance Link</span>
+                <span className="d-sm-none">Copy Link</span>
+              </button>
+              
+              <button 
+                className="btn btn-outline-light" 
+                onClick={handleLogout}
+              >
+                <i className="bi bi-box-arrow-right me-1"></i>
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </nav>
@@ -336,140 +353,36 @@ const DashboardHome = ({ center, setCenter, attendanceLink }) => {
         </p>
       </div>
       
-      <div className="row">
-        {/* Left Column - Profile & Quick Navigation */}
-        <div className="col-md-6">
-          {/* Center Profile Section */}
-          <div className="card mb-4">
-            <div className="card-header d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Center Profile</h5>
-              {!isEditingProfile && (
-                <button 
-                  className="btn btn-sm btn-outline-primary"
-                  onClick={() => setIsEditingProfile(true)}
-                >
-                  Edit
-                </button>
-              )}
+      {/* Quick Navigation - Moved to top */}
+      <div className="card mb-4">
+        <div className="card-header">
+          <h5 className="mb-0">Quick Navigation</h5>
+        </div>
+        <div className="card-body">
+          <div className="row g-3">
+            <div className="col-12 col-md-6">
+              <Link to="/dashboard/students" className="btn btn-primary w-100 py-3">
+                <i className="bi bi-people-fill me-2"></i>
+                <span className="fw-bold">Manage Students</span>
+                <br />
+                <small className="opacity-75">Add, edit, and view student records</small>
+              </Link>
             </div>
-            <div className="card-body">
-              {profileMessage && (
-                <div className={`alert alert-${profileMessageType === 'success' ? 'success' : 'danger'} mb-3`}>
-                  {profileMessage}
-                </div>
-              )}
-              
-              <div className="mb-3">
-                <label className="form-label"><strong>Center Name</strong></label>
-                {isEditingProfile ? (
-                  <input
-                    type="text"
-                    className="form-control"
-                    name="name"
-                    value={profileData.name}
-                    onChange={handleProfileChange}
-                  />
-                ) : (
-                  <p className="form-control-plaintext">{profileData.name || 'Not set'}</p>
-                )}
-              </div>
-              
-              <div className="mb-3">
-                <label className="form-label"><strong>Center ID</strong></label>
-                {isEditingProfile ? (
-                  <input
-                    type="text"
-                    className="form-control"
-                    name="center_id"
-                    value={profileData.center_id}
-                    onChange={handleProfileChange}
-                    placeholder="Enter center ID (numbers only)"
-                  />
-                ) : (
-                  <p className="form-control-plaintext">{profileData.center_id || 'Not set'}</p>
-                )}
-                {isEditingProfile && (
-                  <small className="text-muted">Only numbers are allowed for Center ID</small>
-                )}
-              </div>
-              
-              <div className="mb-3">
-                <label className="form-label"><strong>Email</strong></label>
-                <p className="form-control-plaintext">{profileData.email || 'Not set'}</p>
-                <small className="text-muted">Email cannot be changed (Google OAuth)</small>
-              </div>
-              
-              <div className="mb-3">
-                <label className="form-label"><strong>Address</strong></label>
-                {isEditingProfile ? (
-                  <textarea
-                    className="form-control"
-                    name="address"
-                    value={profileData.address}
-                    onChange={handleProfileChange}
-                    rows="3"
-                  />
-                ) : (
-                  <p className="form-control-plaintext">{profileData.address || 'Not set'}</p>
-                )}
-              </div>
-              
-              <div className="mb-3">
-                <label className="form-label"><strong>Contact</strong></label>
-                {isEditingProfile ? (
-                  <input
-                    type="text"
-                    className="form-control"
-                    name="contact"
-                    value={profileData.contact}
-                    onChange={handleProfileChange}
-                  />
-                ) : (
-                  <p className="form-control-plaintext">{profileData.contact || 'Not set'}</p>
-                )}
-              </div>
-              
-              {isEditingProfile && (
-                <div className="d-flex gap-2">
-                  <button
-                    className="btn btn-primary"
-                    onClick={saveProfile}
-                    disabled={profileLoading}
-                  >
-                    {profileLoading ? 'Saving...' : 'Save Changes'}
-                  </button>
-                  <button
-                    className="btn btn-secondary"
-                    onClick={cancelProfileEdit}
-                    disabled={profileLoading}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Quick Navigation */}
-          <div className="card mb-4">
-            <div className="card-header">
-              <h5>Quick Navigation</h5>
-            </div>
-            <div className="card-body">
-              <div className="d-grid gap-2">
-                <Link to="/dashboard/students" className="btn btn-primary">
-                  Manage Students
-                </Link>
-                <Link to="/dashboard/reports" className="btn btn-primary">
-                  View Reports
-                </Link>
-              </div>
+            <div className="col-12 col-md-6">
+              <Link to="/dashboard/reports" className="btn btn-primary w-100 py-3">
+                <i className="bi bi-graph-up me-2"></i>
+                <span className="fw-bold">View Reports</span>
+                <br />
+                <small className="opacity-75">Attendance reports and analytics</small>
+              </Link>
             </div>
           </div>
         </div>
-        
-        {/* Right Column - Attendance Link & Password Protection */}
-        <div className="col-md-6">
+      </div>
+      
+      <div className="row g-4">
+        {/* First Column - Attendance Link & Security */}
+        <div className="col-12 col-lg-6">
           <div className="card mb-4">
             <div className="card-header">
               <h5>Attendance Link & Security</h5>
@@ -604,6 +517,119 @@ const DashboardHome = ({ center, setCenter, attendanceLink }) => {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Second Column - Center Profile */}
+        <div className="col-12 col-lg-6">
+          <div className="card mb-4">
+            <div className="card-header d-flex justify-content-between align-items-center">
+              <h5 className="mb-0">Center Profile</h5>
+              {!isEditingProfile && (
+                <button 
+                  className="btn btn-sm btn-outline-primary"
+                  onClick={() => setIsEditingProfile(true)}
+                >
+                  Edit
+                </button>
+              )}
+            </div>
+            <div className="card-body">
+              {profileMessage && (
+                <div className={`alert alert-${profileMessageType === 'success' ? 'success' : 'danger'} mb-3`}>
+                  {profileMessage}
+                </div>
+              )}
+              
+              <div className="mb-3">
+                <label className="form-label"><strong>Center Name</strong></label>
+                {isEditingProfile ? (
+                  <input
+                    type="text"
+                    className="form-control"
+                    name="name"
+                    value={profileData.name}
+                    onChange={handleProfileChange}
+                  />
+                ) : (
+                  <p className="form-control-plaintext">{profileData.name || 'Not set'}</p>
+                )}
+              </div>
+              
+              <div className="mb-3">
+                <label className="form-label"><strong>Center ID</strong></label>
+                {isEditingProfile ? (
+                  <input
+                    type="text"
+                    className="form-control"
+                    name="center_id"
+                    value={profileData.center_id}
+                    onChange={handleProfileChange}
+                    placeholder="Enter center ID (numbers only)"
+                  />
+                ) : (
+                  <p className="form-control-plaintext">{profileData.center_id || 'Not set'}</p>
+                )}
+                {isEditingProfile && (
+                  <small className="text-muted">Only numbers are allowed for Center ID</small>
+                )}
+              </div>
+              
+              <div className="mb-3">
+                <label className="form-label"><strong>Email</strong></label>
+                <p className="form-control-plaintext">{profileData.email || 'Not set'}</p>
+                <small className="text-muted">Email cannot be changed (Google OAuth)</small>
+              </div>
+              
+              <div className="mb-3">
+                <label className="form-label"><strong>Address</strong></label>
+                {isEditingProfile ? (
+                  <textarea
+                    className="form-control"
+                    name="address"
+                    value={profileData.address}
+                    onChange={handleProfileChange}
+                    rows="3"
+                  />
+                ) : (
+                  <p className="form-control-plaintext">{profileData.address || 'Not set'}</p>
+                )}
+              </div>
+              
+              <div className="mb-3">
+                <label className="form-label"><strong>Contact</strong></label>
+                {isEditingProfile ? (
+                  <input
+                    type="text"
+                    className="form-control"
+                    name="contact"
+                    value={profileData.contact}
+                    onChange={handleProfileChange}
+                  />
+                ) : (
+                  <p className="form-control-plaintext">{profileData.contact || 'Not set'}</p>
+                )}
+              </div>
+              
+              {isEditingProfile && (
+                <div className="d-flex gap-2">
+                  <button
+                    className="btn btn-primary"
+                    onClick={saveProfile}
+                    disabled={profileLoading}
+                  >
+                    {profileLoading ? 'Saving...' : 'Save Changes'}
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={cancelProfileEdit}
+                    disabled={profileLoading}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
